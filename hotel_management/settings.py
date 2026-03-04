@@ -1,7 +1,8 @@
 import pymysql
+import os
 from pathlib import Path
 
-# Đánh lừa Django rằng chúng ta đang dùng mysqlclient bản mới nhất
+# Đánh lừa Django dùng pymysql (giữ nguyên để tránh lỗi mysqlclient)
 pymysql.version_info = (2, 2, 1, "final", 0)
 pymysql.install_as_MySQLdb()
 
@@ -9,11 +10,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-pp57^v&k7h-9_8r^^j)toornmvak23u)h^4xsy-k-$o97s3wpm'
 
-DEBUG = True
+# ĐỂ DEBUG = TRUE ĐỂ DỄ THEO DÕI LỖI KHI MỚI LÊN SÓNG
+DEBUG = True 
 
-ALLOWED_HOSTS = []
+# CẤU HÌNH QUAN TRỌNG: Cho phép Render truy cập
+ALLOWED_HOSTS = ['*']
 
-# Application definition
 INSTALLED_APPS = [
     'core',
     'django.contrib.admin',
@@ -22,10 +24,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'whitenoise.runserver_nostatic', # Hỗ trợ file tĩnh
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', # Phải nằm ngay dưới Security
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -39,14 +43,15 @@ ROOT_URLCONF = 'hotel_management.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'], 
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'django.template.context_processors.media', # Thêm để hiển thị ảnh
+                'django.template.context_processors.media', # Để hiện ảnh phòng
             ],
         },
     },
@@ -54,19 +59,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'hotel_management.wsgi.application'
 
-# Database - Đã cấu hình cho MySQL
+# DATABASE: Dùng SQLite để khớp với file db.sqlite3 đã push lên GitHub
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'hotel_db',
-        'USER': 'root',
-        'PASSWORD': 'Tranvanduc1230399@', 
-        'HOST': '127.0.0.1', 
-        'PORT': '3306',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
-# Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',},
@@ -74,25 +74,23 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',},
 ]
 
-# Internationalization - Chuyển sang tiếng Việt và múi giờ Việt Nam
-LANGUAGE_CODE = 'vi' # Chuyển sang tiếng Việt
-
-TIME_ZONE = 'Asia/Ho_Chi_Minh' # Múi giờ Việt Nam để ngày đặt phòng chính xác
-
+LANGUAGE_CODE = 'vi'
+TIME_ZONE = 'Asia/Ho_Chi_Minh'
 USE_I18N = True
-
 USE_TZ = True
 
-# Static files (CSS, JavaScript)
+# --- CẤU HÌNH STATIC VÀ MEDIA (QUAN TRỌNG ĐỂ HIỆN GIAO DIỆN) ---
+
+# Tệp tĩnh (CSS, JS)
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles' 
+# Cấu hình lưu trữ file tĩnh cho server
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# --- CẤU HÌNH QUAN TRỌNG BỔ SUNG ---
-
-# 1. Quản lý Hình ảnh (Media Files) - Để ảnh phòng hiện lên
+# Tệp hình ảnh
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# 2. Điều hướng sau khi Đăng nhập/Đăng xuất
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'home'
 LOGIN_URL = 'login'
