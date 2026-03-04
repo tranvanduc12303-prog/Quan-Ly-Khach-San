@@ -2,7 +2,7 @@ import pymysql
 import os
 from pathlib import Path
 
-# Đánh lừa Django dùng pymysql (giữ nguyên để tránh lỗi mysqlclient)
+# Giữ nguyên để tránh lỗi mysqlclient trên môi trường Linux của Render
 pymysql.version_info = (2, 2, 1, "final", 0)
 pymysql.install_as_MySQLdb()
 
@@ -10,11 +10,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-pp57^v&k7h-9_8r^^j)toornmvak23u)h^4xsy-k-$o97s3wpm'
 
-# ĐỂ DEBUG = TRUE ĐỂ DỄ THEO DÕI LỖI KHI MỚI LÊN SÓNG
-DEBUG = True 
+# ĐỔI THÀNH FALSE KHI CHẠY CHÍNH THỨC ĐỂ TRÁNH LỖI 502 VÀ BẢO MẬT
+DEBUG = False 
 
-# CẤU HÌNH QUAN TRỌNG: Cho phép Render truy cập
-ALLOWED_HOSTS = ['*']
+# THÊM ĐỦ CÁC CẤU HÌNH HOST
+ALLOWED_HOSTS = ['quan-ly-khach-san-nhom13.onrender.com', 'localhost', '127.0.0.1', '*']
 
 INSTALLED_APPS = [
     'core',
@@ -24,12 +24,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'whitenoise.runserver_nostatic', # Hỗ trợ file tĩnh
+    'whitenoise.runserver_nostatic', 
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', # Phải nằm ngay dưới Security
+    'whitenoise.middleware.WhiteNoiseMiddleware', # QUAN TRỌNG ĐỂ HIỆN CSS/IMAGE
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -51,7 +51,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'django.template.context_processors.media', # Để hiện ảnh phòng
+                'django.template.context_processors.media',
             ],
         },
     },
@@ -59,7 +59,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'hotel_management.wsgi.application'
 
-# DATABASE: Dùng SQLite để khớp với file db.sqlite3 đã push lên GitHub
+# SỬ DỤNG SQLITE ĐỂ KHỚP VỚI FILE ĐÃ PUSH LÊN GITHUB
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -79,15 +79,13 @@ TIME_ZONE = 'Asia/Ho_Chi_Minh'
 USE_I18N = True
 USE_TZ = True
 
-# --- CẤU HÌNH STATIC VÀ MEDIA (QUAN TRỌNG ĐỂ HIỆN GIAO DIỆN) ---
-
-# Tệp tĩnh (CSS, JS)
+# --- CẤU HÌNH STATIC VÀ MEDIA ---
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles' 
-# Cấu hình lưu trữ file tĩnh cho server
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Tệp hình ảnh
+# SỬA LẠI DÒNG NÀY ĐỂ TRÁNH LỖI KHI DEPLOY
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
