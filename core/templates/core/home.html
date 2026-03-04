@@ -1,0 +1,194 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="py-5 mb-5 text-white text-center shadow-lg" style="background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1920&q=80'); background-size: cover; background-position: center; border-radius: 0 0 40px 40px;">
+    <div class="container py-4">
+        <h1 class="fw-bold display-4" style="color: #ffc107; letter-spacing: 1px; text-shadow: 2px 2px 10px rgba(0,0,0,0.8);">Chào mừng đến với MyHotel.com</h1>
+        <p class="lead opacity-75">Trải nghiệm dịch vụ đẳng cấp và đặt phòng nhanh chóng chỉ trong vài giây.</p>
+    </div>
+</div>
+
+<div class="container">
+    <div class="card shadow-lg mb-5 p-4 border-0" style="background-color: #1e1e1e; border-radius: 20px; margin-top: -80px; border: 1px solid #333 !important;">
+        <form method="GET" class="row g-3">
+            <div class="col-md-9">
+                <div class="input-group">
+                    <span class="input-group-text bg-dark border-secondary text-warning"><i class="bi bi-search"></i></span>
+                    <input type="text" name="q" class="form-control form-control-lg bg-dark text-white border-secondary" placeholder="Nhập địa điểm, số phòng hoặc loại phòng..." value="{{ request.GET.q }}" style="border-radius: 0 12px 12px 0;">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-yellow btn-lg w-100 fw-bold shadow text-dark">TÌM KIẾM NGAY</button>
+            </div>
+        </form>
+
+        <div class="mt-4 d-flex flex-wrap gap-2 justify-content-center">
+            <span class="text-secondary me-2 align-self-center small">Gợi ý tìm kiếm:</span>
+            <a href="/" class="btn btn-sm btn-outline-warning rounded-pill px-3 {% if not request.GET.q %}active{% endif %}">Tất cả</a>
+            <a href="/?q=VIP" class="btn btn-sm btn-outline-warning rounded-pill px-3 {% if request.GET.q == 'VIP' %}active{% endif %}">Phòng VIP</a>
+            <a href="/?q=Hà Nội" class="btn btn-sm btn-outline-warning rounded-pill px-3 {% if request.GET.q == 'Hà Nội' %}active{% endif %}">Hà Nội</a>
+            <a href="/?q=Thái Nguyên" class="btn btn-sm btn-outline-warning rounded-pill px-3 {% if request.GET.q == 'Thái Nguyên' %}active{% endif %}">Thái Nguyên</a>
+        </div>
+    </div>
+
+    <div class="row align-items-center g-5 my-5 py-4">
+        <div class="col-lg-6">
+            <div class="position-relative">
+                <img src="https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=800&q=80" 
+                     class="img-fluid rounded-4 shadow-lg w-100" 
+                     alt="Giới thiệu MyHotel" 
+                     style="object-fit: cover; height: 380px; border: 1px solid #444;">
+                <div class="position-absolute bottom-0 end-0 bg-warning p-3 rounded-start-4 d-none d-md-block shadow-lg">
+                    <h5 class="mb-0 fw-bold text-white" style="letter-spacing: 0.5px;">DỊCH VỤ 5 SAO</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <h2 class="fw-bold text-warning mb-3">Giới thiệu về khách sạn của chúng tôi</h2>
+            <div class="mb-4" style="width: 60px; height: 3px; background-color: #ffc107;"></div>
+            <h4 class="text-white fw-bold mb-3">Sứ mệnh của chúng tôi</h4>
+            <p class="text-white-50 lh-lg">
+                Tại <span class="text-warning fw-bold">MyHotel</span>, chúng tôi cam kết mang đến những trải nghiệm lưu trú khác biệt. 
+                Sứ mệnh của chúng tôi là tạo ra một môi trường chào đón cho tất cả khách hàng, 
+                đảm bảo sự thoải mái và hài lòng tuyệt đối trong suốt thời gian bạn ghé thăm.
+            </p>
+            <p class="text-warning fst-italic small mb-4">"Mỗi giấc ngủ của bạn là niềm tự hào của chúng tôi."</p>
+            <a href="#rooms" class="btn btn-outline-warning rounded-pill px-4 py-2 fw-bold shadow-sm">Khám phá ngay</a>
+        </div>
+    </div>
+
+    {% if destinations %}
+    <div class="mb-5">
+        <h3 class="fw-bold mb-4" style="color: #ffc107; border-left: 5px solid #ffc107; padding-left: 15px;">Điểm đến phổ biến</h3>
+        <div class="d-flex flex-nowrap overflow-auto pb-4 custom-scrollbar" style="gap: 20px; scroll-behavior: smooth;">
+            {% for dest in destinations %}
+            <div style="flex: 0 0 auto; width: 220px;">
+                <a href="/?q={{ dest.name }}" class="text-decoration-none">
+                    <div class="card bg-transparent border-0 destination-card">
+                        <div class="overflow-hidden rounded-4 position-relative" style="height: 250px;">
+                            <img src="{{ dest.image.url }}" class="w-100 h-100" style="object-fit: cover; transition: 0.5s;">
+                            <div class="position-absolute bottom-0 start-0 w-100 p-3" style="background: linear-gradient(transparent, rgba(0,0,0,0.9));">
+                                 <h6 class="text-white fw-bold mb-0 text-center">{{ dest.name }}</h6>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-center text-secondary small">{{ dest.booking_count|floatformat:0 }} chỗ ở</div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row g-4 mb-5 text-center">
+        <div class="col-6 col-md-3"><div class="p-3 border border-secondary rounded-4 bg-dark"><h2 class="fw-bold text-warning mb-0">100+</h2><small class="text-muted">Đối tác</small></div></div>
+        <div class="col-6 col-md-3"><div class="p-3 border border-secondary rounded-4 bg-dark"><h2 class="fw-bold text-warning mb-0">5k+</h2><small class="text-muted">Lượt đặt</small></div></div>
+        <div class="col-6 col-md-3"><div class="p-3 border border-secondary rounded-4 bg-dark"><h2 class="fw-bold text-warning mb-0">24/7</h2><small class="text-muted">Hỗ trợ</small></div></div>
+        <div class="col-6 col-md-3"><div class="p-3 border border-secondary rounded-4 bg-dark"><h2 class="fw-bold text-warning mb-0">4.9/5</h2><small class="text-muted">Đánh giá</small></div></div>
+    </div>
+
+    <div id="rooms" class="d-flex justify-content-between align-items-center mb-4 pt-4">
+        <h3 class="fw-bold" style="color: #ffc107; border-left: 5px solid #ffc107; padding-left: 15px;">
+            {% if request.GET.q %}Kết quả cho "{{ request.GET.q }}"{% else %}Phòng hiện có{% endif %}
+        </h3>
+    </div>
+    
+    <div class="row row-cols-1 row-cols-md-3 g-4 mb-5">
+        {% for room in rooms %}
+        <div class="col">
+            <a href="{% url 'room_detail' room.pk %}" class="text-decoration-none h-100">
+                <div class="card h-100 room-card border-0">
+                    <div class="overflow-hidden position-relative">
+                        {% if room.image %}<img src="{{ room.image.url }}" class="card-img-top" style="height: 250px; object-fit: cover;">{% endif %}
+                        <div class="position-absolute top-0 end-0 m-3">
+                            <span class="badge {% if room.is_available %}bg-success{% else %}bg-danger{% endif %} shadow-sm px-3 py-2 fw-bold">
+                                {% if room.is_available %}CÒN TRỐNG{% else %}ĐÃ ĐẶT{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body p-4 bg-dark border-top border-secondary">
+                        <h5 class="card-title fw-bold text-white">Phòng {{ room.room_number }}</h5>
+                        <p class="text-warning mb-2 small"><i class="bi bi-star-fill"></i> {{ room.average_rating }} ({{ room.review_count }} đánh giá)</p>
+                        <p class="text-info small mb-3"><i class="bi bi-geo-alt"></i> {{ room.address }}</p>
+                        <div class="d-flex justify-content-between align-items-end">
+                            <h4 class="text-warning mb-0 fw-bold">{{ room.price|floatformat:0 }} <small class="fs-6">VND</small></h4>
+                            <span class="btn btn-sm btn-yellow px-3 fw-bold text-dark">Xem phòng</span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="my-5 py-5 border-top border-secondary">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold text-warning">Lý do nên chọn MyHotel?</h2>
+            <p class="text-white-50">Mang đến trải nghiệm nghỉ dưỡng đẳng cấp và sự an tâm tuyệt đối.</p>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4"><div class="card bg-dark border-secondary h-100 p-4 text-center room-card"><i class="bi bi-shield-check text-warning fs-1 mb-3"></i><h5 class="text-white fw-bold">Thanh toán an toàn</h5><p class="text-white-50 small">Đa dạng phương thức thanh toán linh hoạt, bảo mật tuyệt đối.</p></div></div>
+            <div class="col-md-4"><div class="card bg-dark border-secondary h-100 p-4 text-center room-card"><i class="bi bi-geo-alt text-warning fs-1 mb-3"></i><h5 class="text-white fw-bold">Vị trí đắc địa</h5><p class="text-white-50 small">Tọa lạc tại trung tâm, dễ dàng di chuyển đến các điểm tham quan.</p></div></div>
+            <div class="col-md-4"><div class="card bg-dark border-secondary h-100 p-4 text-center room-card"><i class="bi bi-stars text-warning fs-1 mb-3"></i><h5 class="text-white fw-bold">Dịch vụ 5 sao</h5><p class="text-white-50 small">Phục vụ chuyên nghiệp 24/7, mang lại sự hài lòng cao nhất.</p></div></div>
+        </div>
+    </div>
+</div>
+
+<footer class="pt-5 border-top border-secondary" style="background-color: #0b0b0b;">
+    <div class="container"> 
+        <div class="row g-4 mb-5 text-start">
+            <div class="col-lg-4 col-md-6">
+                <h4 class="fw-bold text-warning mb-4">MyHotel</h4>
+                <p class="text-white-50 small pe-lg-5">
+                    Nền tảng đặt phòng trực tuyến hàng đầu, mang đến giải pháp lưu trú an toàn và tiện lợi nhất.
+                </p>
+                <div class="d-flex gap-3 fs-4 mt-3">
+                    <a href="#" class="text-white-50 hover-warning"><i class="bi bi-facebook"></i></a>
+                    <a href="#" class="text-white-50 hover-warning"><i class="bi bi-instagram"></i></a>
+                    <a href="#" class="text-white-50 hover-warning"><i class="bi bi-youtube"></i></a>
+                </div>
+            </div>
+
+            <div class="col-lg-4 col-md-6">
+                <h6 class="text-white fw-bold mb-4">Đối tác thanh toán</h6>
+                <div class="d-flex flex-wrap gap-2 mb-4">
+                    <div class="payment-logo-container"><img src="https://upload.wikimedia.org/wikipedia/commons/d/d7/Visa_Logo.png" alt="Visa"></div>
+                    <div class="payment-logo-container"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/1280px-Mastercard-logo.svg.png" alt="Mastercard"></div>
+                    <div class="payment-logo-container"><img src="https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png" alt="MoMo"></div>
+                    <div class="payment-logo-container"><img src="https://vnpay.vn/s1/statics.vnpay.vn/2023/6/0ox9x9s9ed9q1686559508342.png" alt="VNPay"></div>
+                </div>
+                <h6 class="text-white fw-bold mb-3">Tải ứng dụng</h6>
+                <div class="d-flex gap-2">
+                    <a href="#"><img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" style="height: 35px;"></a>
+                    <a href="#"><img src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg" style="height: 35px;"></a>
+                </div>
+            </div>
+
+            <div class="col-lg-4 col-md-12 text-lg-end">
+                <h6 class="text-white fw-bold mb-4">Liên hệ</h6>
+                <p class="text-white-50 small mb-2"><i class="bi bi-geo-alt text-warning me-2"></i> Thái Nguyên, Việt Nam</p>
+                <p class="text-white-50 small mb-2"><i class="bi bi-envelope text-warning me-2"></i> cs@myhotel.com</p>
+                <p class="text-white-50 small"><i class="bi bi-telephone text-warning me-2"></i> 1900 1234</p>
+            </div>
+        </div>
+        <div class="py-4 border-top border-secondary text-center text-white-50 small">
+            <p class="mb-0">Bản quyền © 2026 MyHotel. Bảo lưu mọi quyền.</p>
+        </div>
+    </div>
+</footer>
+
+<style>
+    body { background-color: #0b0b0b !important; }
+    .btn-yellow { background-color: #ffc107; color: #000 !important; border: none; transition: 0.3s; }
+    .btn-yellow:hover { background-color: #e6af06; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255, 193, 7, 0.4); }
+    .custom-scrollbar::-webkit-scrollbar { height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #ffc107; border-radius: 10px; }
+    .room-card { transition: all 0.3s ease; border: 1px solid #333 !important; border-radius: 15px !important; overflow: hidden; background-color: #1a1a1a; }
+    .room-card:hover { transform: translateY(-10px); border-color: #ffc107 !important; box-shadow: 0 10px 20px rgba(255,193,7,0.15); }
+    .btn-outline-warning.active { background-color: #ffc107 !important; color: #000 !important; font-weight: bold; }
+    .payment-logo-container { background-color: white; width: 60px; height: 35px; display: flex; align-items: center; justify-content: center; border-radius: 5px; padding: 5px; }
+    .payment-logo-container img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .hover-warning:hover { color: #ffc107 !important; transition: 0.3s; }
+    .destination-card:hover img { transform: scale(1.1); }
+</style>
+{% endblock %}
