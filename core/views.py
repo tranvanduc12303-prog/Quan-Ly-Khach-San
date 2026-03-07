@@ -5,9 +5,15 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from datetime import datetime
+from django.contrib.auth.models import User
 
 # 1. Trang chủ: Xử lý hiển thị địa điểm, tìm kiếm và bộ lọc
 def home(request):
+    # TỰ ĐỘNG TẠO ADMIN (Để cứu cánh khi không có quyền Shell trên Render)
+    # Sau khi đăng nhập thành công, bạn nên xóa đoạn này để bảo mật.
+    if not User.objects.filter(username='admin_moi').exists():
+        User.objects.create_superuser('admin_moi', 'admin@example.com', 'Matkhau123@')
+
     query = request.GET.get('q')
     if query:
         # Tìm kiếm theo địa chỉ, số phòng, loại phòng hoặc mô tả
@@ -21,6 +27,7 @@ def home(request):
     else:
         rooms = Room.objects.filter(is_available=True)
 
+    # Lấy danh sách địa điểm để hiển thị ở mục Điểm đến phổ biến
     destinations = Destination.objects.all()
 
     return render(request, 'core/home.html', {

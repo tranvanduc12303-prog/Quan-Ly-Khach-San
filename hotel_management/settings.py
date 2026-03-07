@@ -2,7 +2,7 @@ import pymysql
 import os
 from pathlib import Path
 
-# Giữ nguyên để tránh lỗi mysqlclient trên môi trường Linux của Render
+# Giữ nguyên để tránh lỗi mysqlclient trên Render
 pymysql.version_info = (2, 2, 1, "final", 0)
 pymysql.install_as_MySQLdb()
 
@@ -10,8 +10,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-pp57^v&k7h-9_8r^^j)toornmvak23u)h^4xsy-k-$o97s3wpm'
 
-# ĐỔI THÀNH FALSE KHI CHẠY CHÍNH THỨC ĐỂ TRÁNH LỖI 502 VÀ BẢO MẬT
-DEBUG = False 
+# --- TỰ ĐỘNG NHẬN DIỆN MÔI TRƯỜNG ---
+# Nếu chạy trên Render (có biến RENDER), DEBUG sẽ là False. 
+# Nếu chạy ở máy nhà (Local), DEBUG sẽ là True để bạn thấy lỗi cụ thể.
+DEBUG = 'RENDER' not in os.environ 
 
 # THÊM ĐỦ CÁC CẤU HÌNH HOST
 ALLOWED_HOSTS = ['quan-ly-khach-san-nhom13.onrender.com', 'localhost', '127.0.0.1', '*']
@@ -24,7 +26,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'whitenoise.runserver_nostatic', 
+    'whitenoise.runserver_nostatic', # Hỗ trợ file tĩnh
 ]
 
 MIDDLEWARE = [
@@ -83,7 +85,7 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles' 
 
-# SỬA LẠI DÒNG NÀY ĐỂ TRÁNH LỖI KHI DEPLOY
+# Giữ nguyên cấu hình này để tránh lỗi Manifest khi deploy
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 MEDIA_URL = '/media/'
