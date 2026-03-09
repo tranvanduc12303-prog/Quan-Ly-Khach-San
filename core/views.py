@@ -1,4 +1,5 @@
 from django.shortcuts import redirect, render, get_object_or_404
+from django.http import HttpResponse
 from django.db import models
 from .models import Room, Booking, Destination, Review
 from django.contrib.auth.decorators import login_required
@@ -116,3 +117,10 @@ def cancel_booking(request, pk):
         else:
             messages.error(request, "Không thể hủy đơn đã được quản trị viên xử lý.")
     return redirect('my_bookings')
+from django.core.management import call_command
+def load_my_data(request):
+    try:
+        call_command('loaddata', 'du_lieu_phong.json')
+        return HttpResponse("Đã nạp dữ liệu thành công!")
+    except Exception as e:
+        return HttpResponse(f"Lỗi: {e}")
