@@ -7,6 +7,9 @@ from django.contrib import messages
 from django.utils import timezone
 from datetime import datetime
 from django.contrib.auth.models import User
+from django.core.management import call_command
+# Trong hàm home của bạn:
+call_command('loaddata', 'du_lieu_phong.json')
 
 # 1. Trang chủ: Xử lý hiển thị địa điểm, tìm kiếm và bộ lọc
 def home(request):
