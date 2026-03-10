@@ -13,16 +13,16 @@
             background-color: #121212;
             color: #e0e0e0;
             font-family: 'Montserrat', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
         .navbar {
             background-color: #1a1a1a !important;
             border-bottom: 1px solid #333;
             padding: 1rem 0;
         }
-        .text-price {
-            color: #ffc107 !important; 
-            font-weight: bold;
-        }
+        .text-price { color: #ffc107 !important; font-weight: bold; }
         .btn-yellow {
             background-color: #ffc107 !important;
             border: none !important;
@@ -30,22 +30,53 @@
             font-weight: bold;
             transition: 0.3s;
         }
-        .btn-yellow:hover {
-            background-color: #e0a800 !important;
-            transform: scale(1.05);
+        .btn-yellow:hover { transform: scale(1.05); background-color: #e0a800 !important; }
+        
+        /* --- CHATBOX AI STYLE --- */
+        #chat-wrapper { position: fixed; bottom: 20px; right: 20px; z-index: 9999; }
+        #chat-container {
+            width: 350px; height: 450px; 
+            background: #1e1e1e; border: 1px solid #333;
+            border-radius: 15px; display: none; /* Mặc định ẩn */
+            flex-direction: column; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            overflow: hidden;
         }
-        /* Style cho các thông báo alert */
-        .alert {
-            border-radius: 10px;
-            margin-top: 10px;
+        #chat-header {
+            background: #ffc107; color: #000; padding: 12px 15px;
+            font-weight: bold; display: flex; justify-content: space-between; align-items: center;
         }
+        #chat-messages {
+            flex: 1; overflow-y: auto; padding: 15px;
+            display: flex; flex-direction: column; gap: 10px;
+            background-color: #121212;
+        }
+        .msg { padding: 10px 14px; border-radius: 15px; max-width: 85%; font-size: 0.9rem; line-height: 1.4; }
+        .msg-ai { background: #2a2a2a; align-self: flex-start; color: #fff; border-bottom-left-radius: 2px; }
+        .msg-user { background: #ffc107; color: #000; align-self: flex-end; border-bottom-right-radius: 2px; font-weight: 500; }
+        #chat-input-area { padding: 12px; border-top: 1px solid #333; display: flex; gap: 8px; background: #1a1a1a; }
+        #chat-input-area input {
+            flex: 1; background: #2a2a2a; border: 1px solid #444;
+            color: white; border-radius: 20px; padding: 6px 15px; outline: none;
+        }
+        #chat-toggle {
+            width: 60px; height: 60px; background: #ffc107;
+            border-radius: 50%; display: flex; justify-content: center;
+            align-items: center; cursor: pointer; float: right;
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4);
+            transition: 0.3s;
+        }
+        #chat-toggle:hover { transform: scale(1.1) rotate(5deg); }
+        
+        /* Tùy chỉnh thanh cuộn cho box chat */
+        #chat-messages::-webkit-scrollbar { width: 5px; }
+        #chat-messages::-webkit-scrollbar-track { background: #121212; }
+        #chat-messages::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
     </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
         <div class="container">
             <a class="navbar-brand fw-bold fs-3" href="/" style="color: #ffc107;">MyHotel</a>
-            
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -54,40 +85,122 @@
                 <div class="navbar-nav ms-auto align-items-center">
                     {% if user.is_authenticated %}
                         <span class="nav-link text-light me-3 small">Chào, <strong>{{ user.username }}</strong></span>
-                        
                         <a class="nav-link me-3 fw-bold" href="{% url 'my_bookings' %}" style="color: #ffc107;">
-                             <i class="bi bi-calendar-check"></i> Chỗ nghỉ của tôi
+                             <i class="bi bi-calendar-check"></i> Chỗ nghỉ
                         </a>
-                        
+                        {% if user.is_staff %}
+                        <a class="nav-link me-3 text-info fw-bold" href="{% url 'admin_dashboard' %}">
+                            <i class="bi bi-graph-up"></i> Thống kê
+                        </a>
+                        {% endif %}
                         <form action="{% url 'logout' %}" method="post" class="d-inline">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-link nav-link px-0 text-secondary" style="text-decoration: none;">Đăng xuất</button>
                         </form>
                     {% else %}
                         <a class="nav-link me-3" href="{% url 'login' %}">Đăng nhập</a>
+                        <a class="btn btn-yellow btn-sm px-3" href="#">Đăng ký</a>
                     {% endif %}
-                    <a href="/admin/" class="btn btn-outline-warning btn-sm ms-3">Quản Trị</a>
+                    <a href="/admin/" class="btn btn-outline-warning btn-sm ms-3">Admin</a>
                 </div>
             </div>
         </div>
     </nav>
 
-    <div class="container">
+    <div class="container mt-3">
         {% if messages %}
             {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show bg-dark text-light border-secondary" role="alert">
                     {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
                 </div>
             {% endfor %}
         {% endif %}
     </div>
 
-    <main class="py-4">
-        {% block content %}
-        {% endblock %}
+    <main class="py-4 flex-grow-1">
+        {% block content %}{% endblock %}
     </main>
 
+    <div id="chat-wrapper">
+        <div id="chat-container">
+            <div id="chat-header">
+                <span><i class="bi bi-robot"></i> Trợ lý MyHotel</span>
+                <button onclick="toggleChat()" class="btn-close small" style="font-size: 0.7rem;"></button>
+            </div>
+            <div id="chat-messages">
+                <div class="msg msg-ai">Chào {{ user.username|default:"bạn" }}! Mình là trợ lý thông minh của MyHotel. Bạn cần mình hỗ trợ gì không?</div>
+            </div>
+            <div id="chat-input-area">
+                <input type="text" id="ai-input" placeholder="Nhập tin nhắn..." onkeypress="handleKeyPress(event)">
+                <button onclick="sendToAI()" class="btn btn-warning btn-sm rounded-circle"><i class="bi bi-send-fill"></i></button>
+            </div>
+        </div>
+        <div id="chat-toggle" onclick="toggleChat()">
+            <i class="bi bi-chat-dots-fill fs-2 text-dark"></i>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        // AI Chat Logic
+        function toggleChat() {
+            const chat = document.getElementById('chat-container');
+            if (chat.style.display === 'none' || chat.style.display === '') {
+                chat.style.display = 'flex';
+                // Cuộn xuống tin nhắn cuối khi mở
+                const box = document.getElementById('chat-messages');
+                box.scrollTop = box.scrollHeight;
+            } else {
+                chat.style.display = 'none';
+            }
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') sendToAI();
+        }
+
+        async function sendToAI() {
+            const input = document.getElementById('ai-input');
+            const box = document.getElementById('chat-messages');
+            const msg = input.value.trim();
+            if (!msg) return;
+
+            // 1. Hiển thị tin nhắn người dùng
+            box.innerHTML += `<div class="msg msg-user">${msg}</div>`;
+            input.value = '';
+            box.scrollTop = box.scrollHeight;
+
+            // 2. Hiển thị trạng thái đang trả lời
+            const loadingId = 'loading-' + Date.now();
+            box.innerHTML += `
+                <div class="msg msg-ai" id="${loadingId}">
+                    <div class="spinner-border spinner-border-sm text-warning" role="status"></div>
+                    <span class="ms-2">Đang suy nghĩ...</span>
+                </div>`;
+            box.scrollTop = box.scrollHeight;
+
+            // 3. Gọi API xử lý
+            try {
+                const response = await fetch(`/ai-assistant/?message=${encodeURIComponent(msg)}`);
+                const data = await response.json();
+                
+                // Cập nhật câu trả lời từ AI
+                const loadingElement = document.getElementById(loadingId);
+                if (loadingElement) {
+                    loadingElement.innerText = data.reply;
+                }
+            } catch (error) {
+                const loadingElement = document.getElementById(loadingId);
+                if (loadingElement) {
+                    loadingElement.innerText = "Xin lỗi, hiện tại mình không kết nối được với hệ thống AI.";
+                }
+            }
+            // Tự động cuộn xuống dưới cùng
+            box.scrollTop = box.scrollHeight;
+        }
+    </script>
 </body>
 </html>

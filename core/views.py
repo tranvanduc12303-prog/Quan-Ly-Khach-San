@@ -1,18 +1,54 @@
+import google.generativeai as genai
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import User
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.utils import timezone
+from django.http import HttpResponse, JsonResponse
+from django.core.management import call_command
 from datetime import datetime
+import os
+
 from .models import Room, Booking, Destination, Review
 
-# 1. TRANG CHỦ: Tìm kiếm và hiển thị phòng
-def home(request):
-    # Tự động tạo tài khoản admin nếu chưa có (User: admin_moi / Pass: Matkhau123@)
-    if not User.objects.filter(username='admin_moi').exists():
-        User.objects.create_superuser('admin_moi', 'admin@example.com', 'Matkhau123@')
+# --- CẤU HÌNH HỖ TRỢ ---
 
+def is_admin(user):
+    return user.is_authenticated and user.is_staff
+
+# --- 1. HỆ THỐNG AI (GEMINI) ---
+
+def ai_assistant(request):
+    user_message = request.GET.get('message', '')
+    
+    if user_message:
+        # Ưu tiên lấy Key từ biến môi trường (Render), nếu không có thì lấy Key dán trực tiếp
+        api_key = os.environ.get('GOOGLE_API_KEY', "AIzaSyDKdORffma82ggba_RtbuUMJu1Vc2Nt2UE")
+        
+        try:
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            
+            # Ngữ cảnh nâng cao giúp AI trả lời chuyên nghiệp hơn
+            prompt = (
+                f"Bạn là trợ lý ảo của khách sạn MyHotel. Hãy trả lời thân thiện, "
+                f"lịch sự và ngắn gọn câu hỏi sau bằng tiếng Việt: {user_message}"
+            )
+            
+            response = model.generate_content(prompt)
+            return JsonResponse({'reply': response.text})
+            
+        except Exception as e:
+            # Dòng này sẽ in lỗi thực tế ra Terminal để bạn dễ sửa
+            print(f"--- LỖI AI THỰC TẾ: {str(e)} ---")
+            return JsonResponse({'reply': "Xin lỗi, mình đang bận một chút. Bạn thử lại sau nhé!"})
+            
+    return JsonResponse({'reply': "Bạn muốn hỏi gì về MyHotel ạ?"})
+
+# --- 2. TRANG CHỦ & CHI TIẾT ---
+
+def home(request):
     query = request.GET.get('q', '')
     if query:
         rooms = Room.objects.filter(
@@ -32,7 +68,6 @@ def home(request):
         'query': query
     })
 
-# 2. CHI TIẾT PHÒNG: Đặt phòng và Đánh giá
 def room_detail(request, pk):
     room = get_object_or_404(Room, pk=pk)
     reviews = room.reviews.all().order_by('-created_at')
@@ -71,7 +106,7 @@ def room_detail(request, pk):
         # Xử lý gửi đánh giá
         elif 'submit_review' in request.POST:
             if not request.user.is_authenticated:
-                messages.warning(request, "Đăng nhập để để lại đánh giá.")
+                messages.warning(request, "Đăng nhập để đánh giá.")
                 return redirect('login')
 
             rating = request.POST.get('rating')
@@ -86,18 +121,15 @@ def room_detail(request, pk):
                 messages.success(request, "Cảm ơn bạn đã đánh giá!")
                 return redirect('room_detail', pk=pk)
 
-    return render(request, 'core/room_detail.html', {
-        'room': room,
-        'reviews': reviews
-    })
+    return render(request, 'core/room_detail.html', {'room': room, 'reviews': reviews})
 
-# 3. QUẢN LÝ ĐẶT PHÒNG CỦA TÔI
+# --- 3. QUẢN LÝ DÀNH CHO KHÁCH ---
+
 @login_required
 def my_bookings(request):
     bookings = Booking.objects.filter(user=request.user).order_by('-created_at')
     return render(request, 'core/my_bookings.html', {'bookings': bookings})
 
-# 4. HỦY ĐẶT PHÒNG
 @login_required
 def cancel_booking(request, pk):
     booking = get_object_or_404(Booking, pk=pk, user=request.user)
@@ -105,17 +137,49 @@ def cancel_booking(request, pk):
         booking.delete()
         messages.success(request, "Đã hủy đơn đặt phòng.")
     else:
-        messages.error(request, "Không thể hủy đơn đã duyệt.")
+        messages.error(request, "Không thể hủy đơn đã được xử lý.")
     return redirect('my_bookings')
-from django.http import HttpResponse
-from django.core.management import call_command
-from django.contrib.auth.models import User
+
+# --- 4. QUẢN LÝ DÀNH CHO ADMIN ---
+
+@user_passes_test(is_admin)
+def admin_dashboard(request):
+    booking_stats = Booking.objects.values('status').annotate(total=Count('id'))
+    booking_labels = [item['status'].capitalize() for item in booking_stats]
+    booking_data = [item['total'] for item in booking_stats]
+
+    room_stats = Room.objects.values('address').annotate(total=Count('id'))
+    room_labels = [item['address'] for item in room_stats]
+    room_data = [item['total'] for item in room_stats]
+
+    pending_bookings = Booking.objects.filter(status='pending').order_by('-created_at')
+
+    return render(request, 'core/dashboard.html', {
+        'booking_labels': booking_labels,
+        'booking_data': booking_data,
+        'room_labels': room_labels,
+        'room_data': room_data,
+        'pending_bookings': pending_bookings
+    })
+
+@user_passes_test(is_admin)
+def manage_booking(request, pk, action):
+    booking = get_object_or_404(Booking, pk=pk)
+    if action == 'approve':
+        booking.status = 'approved'
+        messages.success(request, f"Đã duyệt đơn của {booking.user.username}")
+    elif action == 'reject':
+        booking.status = 'rejected'
+        messages.warning(request, f"Đã từ chối đơn của {booking.user.username}")
+    
+    booking.save()
+    return redirect('admin_dashboard')
+
+# --- 5. CÀI ĐẶT HỆ THỐNG ---
 
 def setup_database(request):
-    # Chạy migrate
     call_command('migrate')
-    # Tạo admin nếu chưa có
     if not User.objects.filter(username='admin_moi').exists():
         User.objects.create_superuser('admin_moi', 'admin@example.com', 'matkhau123')
-        return HttpResponse("Đã migrate và tạo tài khoản admin_moi thành công!")
-    return HttpResponse("Hệ thống đã sẵn sàng.")
+        return HttpResponse("Khởi tạo hệ thống thành công! Tài khoản: admin_moi / mật khẩu: matkhau123")
+    return HttpResponse("Hệ thống đã hoạt động bình thường.")
