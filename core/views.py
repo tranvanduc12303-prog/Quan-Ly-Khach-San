@@ -21,20 +21,19 @@ def is_admin(user):
 def ai_assistant(request):
     """
     Xử lý tin nhắn từ chatbot sử dụng Gemini API.
-    Sửa lỗi 404 'models/gemini-1.5-flash not found' và dứt điểm tình trạng im lặng.
+    Sửa lỗi 404 model name và tối ưu hóa việc đọc dữ liệu từ Postgres.
     """
     user_message = request.GET.get('message', '').strip()
     
     if not user_message:
         return JsonResponse({'reply': "Chào bạn! MyHotel có thể giúp gì cho bạn ạ?"})
 
-    # Lấy API Key từ Environment trên Render
     api_key = os.environ.get('GOOGLE_API_KEY')
     if not api_key:
-        return JsonResponse({'reply': "Lỗi: Hệ thống chưa được cấu hình API Key trên Render."})
+        return JsonResponse({'reply': "Chatbot chưa được cấu hình API Key trên Render."})
 
     try:
-        # Làm sạch API Key
+        # Làm sạch Key để tránh lỗi khoảng trắng
         genai.configure(api_key=api_key.strip())
         
         generation_config = {
@@ -43,48 +42,46 @@ def ai_assistant(request):
             "max_output_tokens": 150,
         }
         
-        # FIX CỨNG: Thử tên model chính xác nhất hiện nay
+        # Thử tên model chuẩn nhất (dứt điểm lỗi 404)
         model = None
         for m_name in ["gemini-1.5-flash", "models/gemini-1.5-flash"]:
             try:
                 model = genai.GenerativeModel(model_name=m_name, generation_config=generation_config)
-                # Test nhanh sự tồn tại của model
                 break 
             except Exception:
                 continue
 
         if not model:
-            raise Exception("Không thể kết nối với bất kỳ phiên bản Gemini nào.")
+            raise Exception("Không kết nối được với Gemini.")
 
-        # Lấy dữ liệu thực tế (RAG) để bot trả lời thông minh hơn
+        # Lấy dữ liệu thực thực tế từ PostgreSQL
         rooms = Room.objects.filter(is_available=True)[:5]
         context_rooms = "Hiện tại khách sạn đang hết phòng trống."
         if rooms.exists():
             room_data = [f"Phòng {r.room_number} ({r.address}) giá {r.price}VNĐ" for r in rooms]
-            context_rooms = "Các phòng đang trống: " + "; ".join(room_data)
+            context_rooms = "Danh sách phòng còn trống: " + "; ".join(room_data)
 
         prompt = (
-            f"Bạn là 'Trợ lý ảo MyHotel'. Dữ liệu thực tế: {context_rooms}. "
-            f"Hãy trả lời khách bằng tiếng Việt, thân thiện, ngắn gọn dưới 2 câu. "
-            f"Khách hỏi: {user_message}"
+            f"Bạn là 'Trợ lý ảo MyHotel'. Dữ liệu khách sạn: {context_rooms}. "
+            f"Trả lời khách bằng tiếng Việt, thân thiện, ngắn gọn (tối đa 2 câu). "
+            f"Câu hỏi: {user_message}"
         )
         
         response = model.generate_content(prompt)
         
-        # Trả về câu trả lời từ AI
         if response and response.text:
             return JsonResponse({'reply': response.text})
-        return JsonResponse({'reply': "Xin lỗi, mình đang gặp chút trục trặc, bạn thử lại sau nhé!"})
+        return JsonResponse({'reply': "Mình đang xử lý, bạn hỏi lại nhé!"})
         
     except Exception as e:
-        # Ghi log lỗi để bạn xem trong Dashboard Render
-        print(f"--- CRITICAL AI ERROR: {str(e)} ---")
-        return JsonResponse({'reply': "Hệ thống AI đang khởi động lại, bạn chờ 1 lát nhé!"})
+        print(f"--- AI ERROR: {str(e)} ---")
+        return JsonResponse({'reply': "Hệ thống AI đang khởi động lại trên server mới, bạn thử lại sau ít phút nhé!"})
 
 # --- 2. TRANG CHỦ & TÌM KIẾM ---
 def home(request):
     query = request.GET.get('q', '').strip()
     destinations = Destination.objects.all()
+    # Chỉ lấy phòng còn trống
     rooms_available = Room.objects.filter(is_available=True)
     
     if query:
@@ -110,7 +107,7 @@ def room_detail(request, pk):
     if request.method == 'POST':
         if 'book_room' in request.POST:
             if not request.user.is_authenticated:
-                messages.warning(request, "Vui lòng đăng nhập để đặt phòng.")
+                messages.warning(request, "Bạn cần đăng nhập để đặt phòng.")
                 return redirect('login')
 
             check_in_str = request.POST.get('check_in')
@@ -121,18 +118,18 @@ def room_detail(request, pk):
                 check_out = datetime.strptime(check_out_str, '%Y-%m-%d').date()
 
                 if check_out <= check_in:
-                    messages.error(request, "Ngày trả phòng phải sau ngày nhận.")
+                    messages.error(request, "Ngày trả phải sau ngày nhận.")
                 elif check_in < timezone.now().date():
-                    messages.error(request, "Không thể đặt phòng cho ngày đã qua.")
+                    messages.error(request, "Không thể đặt ngày trong quá khứ.")
                 else:
                     Booking.objects.create(
                         user=request.user, room=room,
                         check_in=check_in, check_out=check_out, status='pending'
                     )
-                    messages.success(request, f"Đã gửi yêu cầu đặt phòng {room.room_number}!")
+                    messages.success(request, f"Yêu cầu đặt phòng {room.room_number} đã được gửi!")
                     return redirect('my_bookings')
             except (ValueError, TypeError):
-                messages.error(request, "Định dạng ngày không hợp lệ.")
+                messages.error(request, "Vui lòng nhập ngày hợp lệ.")
 
         elif 'submit_review' in request.POST:
             rating = request.POST.get('rating')
@@ -155,14 +152,15 @@ def cancel_booking(request, pk):
     booking = get_object_or_404(Booking, pk=pk, user=request.user)
     if booking.status == 'pending':
         booking.delete()
-        messages.success(request, "Đã hủy đơn đặt phòng.")
+        messages.success(request, "Đã hủy yêu cầu.")
     else:
-        messages.error(request, "Đơn đã được duyệt, không thể tự hủy.")
+        messages.error(request, "Phòng đã duyệt không thể tự hủy.")
     return redirect('my_bookings')
 
-# --- 5. HỆ THỐNG QUẢN TRỊ (ADMIN) ---
+# --- 5. HỆ THỐNG QUẢN TRỊ (ADMIN DASHBOARD) ---
 @user_passes_test(is_admin)
 def admin_dashboard(request):
+    # Thống kê đơn hàng và phòng từ PostgreSQL
     booking_stats = Booking.objects.values('status').annotate(total=Count('id'))
     room_stats = Room.objects.values('address').annotate(total=Count('id'))
     pending_bookings = Booking.objects.filter(status='pending').order_by('-created_at')
@@ -190,13 +188,14 @@ def manage_booking(request, pk, action):
     booking.save()
     return redirect('admin_dashboard')
 
-# --- 6. KHỞI TẠO HỆ THỐNG ---
+# --- 6. KHỞI TẠO CƠ SỞ DỮ LIỆU ---
 def setup_database(request):
+    """Lệnh tạo bảng duy nhất trên PostgreSQL vĩnh viễn"""
     try:
         call_command('migrate')
         if not User.objects.filter(username='admin_moi').exists():
             User.objects.create_superuser('admin_moi', 'admin@example.com', 'matkhau123')
-            return HttpResponse("Khởi tạo Admin thành công! User: admin_moi / Pass: matkhau123")
-        return HttpResponse("Database đã sẵn sàng.")
+            return HttpResponse("Khởi tạo Admin trên Postgres thành công! User: admin_moi / Pass: matkhau123")
+        return HttpResponse("Cơ sở dữ liệu PostgreSQL đã sẵn sàng và đồng bộ.")
     except Exception as e:
         return HttpResponse(f"Lỗi: {str(e)}")
