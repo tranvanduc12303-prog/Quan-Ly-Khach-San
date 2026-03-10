@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
+# Import CloudinaryField
+from cloudinary.models import CloudinaryField
 
 # 1. Bảng Loại phòng
 class RoomType(models.Model):
@@ -15,7 +17,10 @@ class RoomType(models.Model):
 class Room(models.Model):
     room_number = models.CharField("Số phòng", max_length=10)
     room_type = models.ForeignKey(RoomType, on_delete=models.CASCADE, verbose_name="Loại phòng")
-    image = models.ImageField("Ảnh đại diện", upload_to='rooms/', null=True, blank=True)
+    
+    # SỬA LỖI TẠI ĐÂY: Tham số đầu tiên chính là tên hiển thị trên Admin
+    image = CloudinaryField('Ảnh đại diện', folder='rooms/', null=True, blank=True)
+    
     price = models.DecimalField("Giá mỗi đêm", max_digits=10, decimal_places=2)
     is_available = models.BooleanField("Còn trống", default=True)
     address = models.CharField("Địa chỉ/Thành phố", max_length=255, default="Hà Nội") 
@@ -24,7 +29,6 @@ class Room(models.Model):
     def __str__(self):
         return f"Phòng {self.room_number} ({self.room_type.name})"
 
-    # CẢI TIẾN: Tính điểm trung bình của phòng
     @property
     def average_rating(self):
         reviews = self.reviews.all()
@@ -33,7 +37,6 @@ class Room(models.Model):
             return round(total / reviews.count(), 1)
         return 0
 
-    # CẢI TIẾN: Đếm tổng số đánh giá
     @property
     def review_count(self):
         return self.reviews.count()
@@ -77,13 +80,11 @@ class Service(models.Model):
     def __str__(self):
         return self.name
 
-# 5. Bảng Đánh giá (Đã nâng cấp logic)
+# 5. Bảng Đánh giá
 class Review(models.Model):
-    # Dùng related_name='reviews' để Room dễ dàng truy cập danh sách đánh giá
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='reviews')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     comment = models.TextField("Bình luận")
-    # Thêm validators để giới hạn 1-5 sao
     rating = models.IntegerField(
         "Đánh giá (1-5)", 
         validators=[MinValueValidator(1), MaxValueValidator(5)],
@@ -97,9 +98,11 @@ class Review(models.Model):
 # 6. Bảng Địa điểm thu hút
 class Destination(models.Model):
     name = models.CharField("Tên địa điểm", max_length=100)
-    image = models.ImageField("Hình ảnh", upload_to='destinations/')
+    
+    # SỬA LỖI TẠI ĐÂY: Tham số đầu tiên là tên hiển thị
+    image = CloudinaryField('Hình ảnh địa điểm', folder='destinations/')
+    
     booking_count = models.IntegerField("Số chỗ ở", default=0)
 
     def __str__(self):
         return self.name
-    

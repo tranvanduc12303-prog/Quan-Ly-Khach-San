@@ -1,4 +1,5 @@
 {% extends 'core/base.html' %}
+{% load static %}
 
 {% block content %}
 <div class="py-5 mb-5 text-white text-center shadow-lg" style="background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1920&q=80'); background-size: cover; background-position: center; border-radius: 0 0 40px 40px;">
@@ -14,7 +15,7 @@
             <div class="col-md-9">
                 <div class="input-group">
                     <span class="input-group-text bg-dark border-secondary text-warning"><i class="bi bi-search"></i></span>
-                    <input type="text" name="q" class="form-control form-control-lg bg-dark text-white border-secondary" placeholder="Nhập địa điểm, số phòng..." value="{{ query|default:'' }}" style="border-radius: 0 12px 12px 0;">
+                    <input type="text" name="q" class="form-control form-control-lg bg-dark text-white border-secondary" placeholder="Nhập địa điểm, tên khách sạn..." value="{{ query|default:'' }}" style="border-radius: 0 12px 12px 0;">
                 </div>
             </div>
             <div class="col-md-3">
@@ -23,7 +24,6 @@
         </form>
     </div>
 
-    {% if destinations %}
     <div class="mb-5">
         <h3 class="fw-bold mb-4" style="color: #ffc107; border-left: 5px solid #ffc107; padding-left: 15px;">Điểm đến phổ biến</h3>
         <div class="d-flex flex-nowrap overflow-auto pb-4" style="gap: 20px;">
@@ -44,10 +44,13 @@
                     </div>
                 </a>
             </div>
+            {% empty %}
+            <div class="ps-3 text-muted">
+                <p><i class="bi bi-info-circle"></i> Đang cập nhật các địa điểm du lịch hấp dẫn...</p>
+            </div>
             {% endfor %}
         </div>
     </div>
-    {% endif %}
 
     <div id="rooms" class="mb-4 pt-4">
         <h3 class="fw-bold" style="color: #ffc107; border-left: 5px solid #ffc107; padding-left: 15px;">
@@ -61,7 +64,11 @@
             <a href="{% url 'room_detail' room.pk %}" class="text-decoration-none">
                 <div class="card h-100 room-card border-0">
                     <div class="position-relative">
-                        {% if room.image %}<img src="{{ room.image.url }}" class="card-img-top" style="height: 220px; object-fit: cover;">{% endif %}
+                        {% if room.image %}
+                            <img src="{{ room.image.url }}" class="card-img-top" style="height: 220px; object-fit: cover;">
+                        {% else %}
+                            <div style="height: 220px;" class="bg-secondary d-flex align-items-center justify-content-center text-white">No Image</div>
+                        {% endif %}
                         <span class="position-absolute top-0 end-0 m-2 badge bg-success px-2 py-1">CÒN TRỐNG</span>
                     </div>
                     <div class="card-body bg-dark text-white border-top border-secondary">
@@ -73,7 +80,10 @@
             </a>
         </div>
         {% empty %}
-        <div class="col-12 text-center py-5 text-muted">Không tìm thấy phòng phù hợp.</div>
+        <div class="col-12 text-center py-5 text-muted border border-secondary rounded-4 mx-2">
+            <i class="bi bi-house-exclamation fs-1 text-warning"></i>
+            <p class="mt-2">Hiện tại hệ thống đang cập nhật danh sách phòng. Bạn vui lòng quay lại sau!</p>
+        </div>
         {% endfor %}
     </div>
 </div>
@@ -91,7 +101,7 @@
         <div id="chat-messages" class="card-body overflow-auto p-3" style="height: 350px; background: #121212; scroll-behavior: smooth;">
             <div class="mb-2">
                 <small class="bg-dark text-white p-2 rounded d-inline-block border border-secondary">
-                    Chào bạn! Mình là AI của MyHotel. Bạn cần tìm phòng ở đâu hay muốn biết thêm dịch vụ gì không?
+                    Chào bạn! Mình là AI của MyHotel. Mình có thể giúp bạn tìm phòng hoặc giải đáp dịch vụ khách sạn.
                 </small>
             </div>
         </div>
@@ -105,12 +115,11 @@
 </div>
 
 <style>
-    body { background-color: #0b0b0b !important; }
+    body { background-color: #0b0b0b !important; color: #fff; }
     .btn-yellow { background-color: #ffc107; color: #000; border: none; }
-    .btn-yellow:hover { background-color: #e0a800; }
-    .room-card { transition: 0.3s; border: 1px solid #333 !important; }
+    .btn-yellow:hover { background-color: #e0a800; color: #000; }
+    .room-card { transition: 0.3s; border: 1px solid #333 !important; background-color: #1a1a1a; }
     .room-card:hover { transform: translateY(-5px); border-color: #ffc107 !important; }
-    /* Tùy chỉnh thanh cuộn cho khung chat */
     #chat-messages::-webkit-scrollbar { width: 5px; }
     #chat-messages::-webkit-scrollbar-track { background: #121212; }
     #chat-messages::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
@@ -135,40 +144,34 @@ document.addEventListener('DOMContentLoaded', function() {
         const text = input.value.trim();
         if (!text) return;
 
-        // 1. Hiển thị tin nhắn người dùng
         messages.innerHTML += `<div class="text-end mb-2"><small class="bg-warning text-dark p-2 rounded d-inline-block shadow-sm">${text}</small></div>`;
         input.value = '';
         
-        // 2. Hiển thị trạng thái đang chờ
         const loadingId = "loading-" + Date.now();
         messages.innerHTML += `
             <div class="mb-2" id="${loadingId}">
                 <small class="bg-dark text-muted p-2 rounded d-inline-block border border-secondary">
-                    <span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang suy nghĩ...
+                    <span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang trả lời...
                 </small>
             </div>`;
         messages.scrollTop = messages.scrollHeight;
 
         try {
-            // Gọi API đến Django views
             const response = await fetch(`/ai-assistant/?message=${encodeURIComponent(text)}`);
-            
             if (!response.ok) throw new Error("Server error");
-            
             const data = await response.json();
             
-            // 3. Xóa trạng thái chờ và hiển thị câu trả lời
             const loadingElement = document.getElementById(loadingId);
             if (loadingElement) loadingElement.remove();
 
             messages.innerHTML += `
-                <div class="mb-2 animate__animated animate__fadeIn">
+                <div class="mb-2">
                     <small class="bg-dark text-white p-2 rounded d-inline-block border border-secondary shadow-sm">${data.reply}</small>
                 </div>`;
         } catch (e) {
             const loadingElement = document.getElementById(loadingId);
             if (loadingElement) {
-                loadingElement.innerHTML = `<small class="text-danger border border-danger p-2 rounded d-inline-block">Lỗi: Hệ thống AI đang bận, vui lòng thử lại sau!</small>`;
+                loadingElement.innerHTML = `<small class="text-danger border border-danger p-2 rounded d-inline-block">AI đang bận, hãy thử lại sau nhé!</small>`;
             }
         }
         messages.scrollTop = messages.scrollHeight;

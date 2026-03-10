@@ -8,27 +8,34 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # --- BẢO MẬT & DEBUG ---
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-full-clean-key-2026')
 
-# Tự động tắt Debug khi lên Render để bảo mật
+# ÉP BUỘC DEBUG = False KHI LÊN PRODUCTION (RENDER)
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-# Cho phép chạy trên mọi tên miền (quan trọng cho Render)
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['*'] 
 
 # --- DANH SÁCH ỨNG DỤNG ---
 INSTALLED_APPS = [
+    # Phải đặt cloudinary_storage TRƯỚC staticfiles
+    'cloudinary_storage',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
+    
+    # Cloudinary app
+    'cloudinary',
+    
+    # App của bạn
     'core',
 ]
 
 # --- CÁC LỚP TRUNG GIAN (MIDDLEWARE) ---
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', # Hiển thị CSS trên Render
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -58,9 +65,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'hotel_management.wsgi.application'
 
-# --- CƠ SỞ DỮ LIỆU (FIX CỨNG ĐỂ KHÔNG MẤT DỮ LIỆU) ---
-# Nếu có biến môi trường DATABASE_URL (Trên Render), dùng Postgres. 
-# Nếu không (Dưới máy), dùng SQLite để đơn giản.
+# --- CƠ SỞ DỮ LIỆU ---
 DATABASES = {
     'default': dj_database_url.config(
         default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
@@ -68,29 +73,24 @@ DATABASES = {
     )
 }
 
-# --- KIỂM TRA MẬT KHẨU ---
-AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',},
-]
-
-# --- ĐA NGÔN NGỮ & THỜI GIAN ---
-LANGUAGE_CODE = 'vi'
-TIME_ZONE = 'Asia/Ho_Chi_Minh'
-USE_I18N = True
-USE_TZ = True
-
-# --- TẬP TIN TĨNH (STATIC FILES) ---
+# --- TẬP TIN TĨNH (WHITE NOISE) ---
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
-
-# Tối ưu hóa file tĩnh cho Render (WhiteNoise)
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# --- TẬP TIN MEDIA ---
+# --- CẤU HÌNH CLOUDINARY (LƯU TRỮ ẢNH VĨNH VIỄN) ---
+# Thay thế các thông tin dưới đây bằng thông tin từ Dashboard Cloudinary của bạn
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': 'your_cloud_name', 
+    'API_KEY': 'your_api_key',
+    'API_SECRET': 'your_api_secret'
+}
+
+# Ép buộc Django sử dụng Cloudinary để lưu các tệp upload (Media)
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+# Vẫn giữ khai báo Media để dự phòng Local
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
@@ -98,5 +98,12 @@ MEDIA_ROOT = BASE_DIR / 'media'
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'home'
+
+# --- BẢO MẬT KHI DEBUG = FALSE ---
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
