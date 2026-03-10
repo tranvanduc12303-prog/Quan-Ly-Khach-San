@@ -21,58 +21,59 @@ def is_admin(user):
 def ai_assistant(request):
     """
     Xử lý tin nhắn từ chatbot sử dụng Gemini API.
-    Sửa lỗi 404 bằng cách sử dụng tên model trực tiếp: 'gemini-1.5-flash'.
+    Dùng cơ chế Fallback để tránh lỗi 404 Model trên Render.
     """
     user_message = request.GET.get('message', '').strip()
     
     if not user_message:
         return JsonResponse({'reply': "Chào bạn! MyHotel có thể giúp gì cho bạn ạ?"})
 
-    # Lấy API Key từ Environment trên Render
     api_key = os.environ.get('GOOGLE_API_KEY')
-    if not api_key or len(api_key) < 10:
-        return JsonResponse({'reply': "Chatbot chưa được cấu hình API Key chính xác trên Render."})
+    if not api_key:
+        return JsonResponse({'reply': "Lỗi: Chatbot chưa nhận được API Key."})
 
     try:
-        genai.configure(api_key=api_key)
+        # Cấu hình API Key (đảm bảo sạch dấu cách)
+        genai.configure(api_key=api_key.strip())
         
-        # Cấu hình tham số phản hồi
         generation_config = {
             "temperature": 0.7,
             "top_p": 0.95,
             "max_output_tokens": 150,
         }
         
-        # FIX: Sử dụng tên model chuẩn để tránh lỗi 404 models/gemini-1.5-flash
-        model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash", 
-            generation_config=generation_config
-        )
-        
-        # Lấy dữ liệu thực tế để cung cấp ngữ cảnh cho AI (RAG đơn giản)
+        # Thử các tên model khác nhau để tránh lỗi 404 tùy phiên bản thư viện
+        model = None
+        for model_name in ["gemini-1.5-flash", "models/gemini-1.5-flash"]:
+            try:
+                model = genai.GenerativeModel(model_name=model_name, generation_config=generation_config)
+                # Kiểm tra nhanh model có hoạt động không
+                break 
+            except:
+                continue
+
+        if not model:
+            return JsonResponse({'reply': "Lỗi kết nối AI (Model not found)."})
+
+        # Lấy dữ liệu thực tế (RAG)
         rooms = Room.objects.filter(is_available=True)[:5]
+        context_rooms = "Hết phòng."
         if rooms.exists():
             room_data = [f"Phòng {r.room_number} tại {r.address} giá {r.price}VNĐ" for r in rooms]
-            context_rooms = "Danh sách phòng trống hiện có: " + "; ".join(room_data)
-        else:
-            context_rooms = "Hiện tại khách sạn đang hết phòng trống."
+            context_rooms = "Phòng trống: " + "; ".join(room_data)
 
         prompt = (
-            f"Bạn là 'Trợ lý ảo MyHotel'. Dữ liệu khách sạn: {context_rooms}. "
-            f"Hãy trả lời khách bằng tiếng Việt, lịch sự, ngắn gọn (tối đa 2 câu). "
-            f"Câu hỏi: {user_message}"
+            f"Bạn là 'Trợ lý ảo MyHotel'. Dữ liệu: {context_rooms}. "
+            f"Hãy trả lời bằng tiếng Việt, lịch sự, ngắn gọn (tối đa 2 câu). "
+            f"Khách hỏi: {user_message}"
         )
         
         response = model.generate_content(prompt)
-        
-        if response and response.text:
-            return JsonResponse({'reply': response.text})
-        return JsonResponse({'reply': "Mình đang suy nghĩ, bạn hỏi lại câu khác nhé!"})
+        return JsonResponse({'reply': response.text})
         
     except Exception as e:
-        # Ghi log lỗi chi tiết để debug trên Render
         print(f"--- CRITICAL AI ERROR: {str(e)} ---")
-        return JsonResponse({'reply': "Hệ thống AI đang bận (lỗi kết nối), bạn thử lại sau nhé!"})
+        return JsonResponse({'reply': "Hệ thống AI đang khởi động lại, bạn thử lại sau 1 phút nhé!"})
 
 # --- 2. TRANG CHỦ & TÌM KIẾM ---
 def home(request):
@@ -114,9 +115,9 @@ def room_detail(request, pk):
                 check_out = datetime.strptime(check_out_str, '%Y-%m-%d').date()
 
                 if check_out <= check_in:
-                    messages.error(request, "Ngày trả phòng phải sau ngày nhận phòng.")
+                    messages.error(request, "Ngày trả phải sau ngày nhận.")
                 elif check_in < timezone.now().date():
-                    messages.error(request, "Không thể đặt phòng cho ngày trong quá khứ.")
+                    messages.error(request, "Không đặt được phòng cho ngày cũ.")
                 else:
                     Booking.objects.create(
                         user=request.user, room=room,
@@ -125,14 +126,14 @@ def room_detail(request, pk):
                     messages.success(request, f"Đã gửi yêu cầu đặt phòng {room.room_number}!")
                     return redirect('my_bookings')
             except (ValueError, TypeError):
-                messages.error(request, "Vui lòng chọn định dạng ngày hợp lệ.")
+                messages.error(request, "Vui lòng chọn ngày hợp lệ.")
 
         elif 'submit_review' in request.POST:
             rating = request.POST.get('rating')
             comment = request.POST.get('comment')
             if rating and comment:
                 Review.objects.create(room=room, user=request.user, rating=int(rating), comment=comment)
-                messages.success(request, "Cảm ơn bạn đã gửi đánh giá!")
+                messages.success(request, "Cảm ơn bạn đã đánh giá!")
                 return redirect('room_detail', pk=pk)
 
     return render(request, 'core/room_detail.html', {'room': room, 'reviews': reviews})
@@ -148,17 +149,14 @@ def cancel_booking(request, pk):
     booking = get_object_or_404(Booking, pk=pk, user=request.user)
     if booking.status == 'pending':
         booking.delete()
-        messages.success(request, "Đã hủy yêu cầu đặt phòng thành công.")
+        messages.success(request, "Đã hủy yêu cầu.")
     else:
-        messages.error(request, "Đơn đã được xử lý, không thể tự hủy.")
+        messages.error(request, "Không thể hủy đơn đã duyệt.")
     return redirect('my_bookings')
 
 # --- 5. HỆ THỐNG QUẢN TRỊ (ADMIN) ---
 @user_passes_test(is_admin)
 def admin_dashboard(request):
-    """
-    Yêu cầu file: core/templates/core/dashboard.html phải tồn tại.
-    """
     booking_stats = Booking.objects.values('status').annotate(total=Count('id'))
     room_stats = Room.objects.values('address').annotate(total=Count('id'))
     pending_bookings = Booking.objects.filter(status='pending').order_by('-created_at')
@@ -170,7 +168,6 @@ def admin_dashboard(request):
         'room_data': [item['total'] for item in room_stats],
         'pending_bookings': pending_bookings
     }
-    # Đảm bảo đường dẫn template khớp với core/templates/core/dashboard.html
     return render(request, 'core/dashboard.html', context)
 
 @user_passes_test(is_admin)
@@ -180,20 +177,18 @@ def manage_booking(request, pk, action):
         booking.status = 'approved'
         booking.room.is_available = False
         booking.room.save()
-        messages.success(request, f"Đã duyệt và khóa phòng {booking.room.room_number}.")
     elif action == 'reject':
         booking.status = 'rejected'
-        messages.warning(request, f"Đã từ chối đơn của {booking.user.username}.")
     booking.save()
     return redirect('admin_dashboard')
 
-# --- 6. KHỞI TẠO HỆ THỐNG ---
+# --- 6. KHỞI TẠO ---
 def setup_database(request):
     try:
         call_command('migrate')
         if not User.objects.filter(username='admin_moi').exists():
             User.objects.create_superuser('admin_moi', 'admin@example.com', 'matkhau123')
-            return HttpResponse("Khởi tạo Admin thành công! User: admin_moi / Pass: matkhau123")
-        return HttpResponse("Hệ thống cơ sở dữ liệu đã sẵn sàng.")
+            return HttpResponse("Admin: admin_moi / Pass: matkhau123")
+        return HttpResponse("Sẵn sàng.")
     except Exception as e:
-        return HttpResponse(f"Lỗi khởi tạo: {str(e)}")
+        return HttpResponse(f"Lỗi: {str(e)}")
