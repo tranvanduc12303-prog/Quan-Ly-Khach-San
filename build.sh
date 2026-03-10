@@ -2,17 +2,19 @@
 # Thoát ngay nếu có lỗi
 set -o errexit
 
-# Cài đặt các thư viện từ requirements.txt
+# 1. Cài đặt thư viện (Chỉ cần 1 lần)
 pip install -r requirements.txt
 
-# Gom các file giao diện (css, js, images)
+# 2. Gom các file tĩnh (CSS, JS)
 python manage.py collectstatic --no-input
 
-# Cập nhật cấu trúc database trên Render
+# 3. Cập nhật cấu trúc database (Quan trọng nhất để hết lỗi 500)
 python manage.py migrate
 
-# TỰ ĐỘNG TẠO ADMIN (Thay đổi thông tin bên dưới theo ý bạn)
-# User: admin_render | Pass: matkhau123
+# 4. TỰ ĐỘNG TẠO ADMIN (Để bạn có thể đăng nhập ngay)
+# Tài khoản: admin_render | Mật khẩu: matkhau123
 python manage.py shell -c "from django.contrib.auth.models import User; User.objects.filter(username='admin_render').exists() or User.objects.create_superuser('admin_render', 'admin@example.com', 'matkhau123')"
-python manage.py loaddata data.json
-pip install -r requirements.txt
+
+# 5. Đổ dữ liệu mẫu (Chỉ dùng nếu bạn có file data.json chuẩn)
+# Nếu bạn chưa có file này hoặc bị lỗi, hãy thêm dấu # ở đầu dòng dưới
+# python manage.py loaddata data.json
