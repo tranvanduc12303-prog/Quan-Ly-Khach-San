@@ -80,11 +80,11 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # --- CẤU HÌNH CLOUDINARY (LƯU TRỮ ẢNH VĨNH VIỄN) ---
-# Thay thế các thông tin dưới đây bằng thông tin từ Dashboard Cloudinary của bạn
+# Đã cập nhật theo thông tin từ Dashboard của bạn
 CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': 'your_cloud_name', 
-    'API_KEY': 'your_api_key',
-    'API_SECRET': 'your_api_secret'
+    'CLOUD_NAME': 'djh1ag2fh', 
+    'API_KEY': '315465561373434',
+    'API_SECRET': 'Dán_API_Secret_của_bạn_vào_đây' # Nhấn vào biểu tượng "con mắt" trên Cloudinary để lấy mã này
 }
 
 # Ép buộc Django sử dụng Cloudinary để lưu các tệp upload (Media)
