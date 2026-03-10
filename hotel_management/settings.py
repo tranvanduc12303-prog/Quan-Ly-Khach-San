@@ -15,8 +15,7 @@ ALLOWED_HOSTS = ['*']
 
 # --- DANH SÁCH ỨNG DỤNG ---
 INSTALLED_APPS = [
-    # Phải đặt cloudinary_storage TRƯỚC staticfiles
-    'cloudinary_storage',
+    'cloudinary_storage', # Phải đặt TRƯỚC staticfiles
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -24,11 +23,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
-    
-    # Cloudinary app
     'cloudinary',
-    
-    # App của bạn
     'core',
 ]
 
@@ -66,6 +61,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'hotel_management.wsgi.application'
 
 # --- CƠ SỞ DỮ LIỆU ---
+# Tự động dùng Postgres trên Render, nếu không có thì dùng SQLite ở máy local
 DATABASES = {
     'default': dj_database_url.config(
         default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
@@ -79,18 +75,16 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# --- CẤU HÌNH CLOUDINARY (LƯU TRỮ ẢNH VĨNH VIỄN) ---
-# Đã cập nhật theo thông tin từ Dashboard của bạn
+# --- CẤU HÌNH CLOUDINARY ---
+# Sử dụng os.environ.get để lấy thông tin từ mục Environment trên Render
 CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': 'djh1ag2fh', 
-    'API_KEY': '315465561373434',
-    'API_SECRET': 'Dán_API_Secret_của_bạn_vào_đây' # Nhấn vào biểu tượng "con mắt" trên Cloudinary để lấy mã này
+    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', 'djh1ag2fh'), 
+    'API_KEY': os.environ.get('CLOUDINARY_API_KEY', '315465561373434'),
+    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', 'HrR9tRA24kdJmI9KaKJ3FA7vsVA')
 }
 
-# Ép buộc Django sử dụng Cloudinary để lưu các tệp upload (Media)
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
-# Vẫn giữ khai báo Media để dự phòng Local
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
