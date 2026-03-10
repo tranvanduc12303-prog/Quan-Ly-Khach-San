@@ -1,6 +1,9 @@
 import os
 from pathlib import Path
 import dj_database_url
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
 # --- ĐƯỜNG DẪN CƠ SỞ ---
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -8,14 +11,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # --- BẢO MẬT & DEBUG ---
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-full-clean-key-2026')
 
-# ÉP BUỘC DEBUG = False KHI LÊN PRODUCTION (RENDER)
+# Ép buộc DEBUG = False khi lên Production (Render)
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = ['*'] 
 
 # --- DANH SÁCH ỨNG DỤNG ---
 INSTALLED_APPS = [
-    'cloudinary_storage', # Phải đặt TRƯỚC staticfiles
+    'cloudinary_storage',         # Phải nằm trên cùng
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -23,14 +26,14 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
-    'cloudinary',
-    'core',
+    'cloudinary',                 # Thư viện Cloudinary
+    'core',                       # App của bạn
 ]
 
 # --- CÁC LỚP TRUNG GIAN (MIDDLEWARE) ---
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', # Phải nằm sau SecurityMiddleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -61,7 +64,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'hotel_management.wsgi.application'
 
 # --- CƠ SỞ DỮ LIỆU ---
-# Tự động dùng Postgres trên Render, nếu không có thì dùng SQLite ở máy local
 DATABASES = {
     'default': dj_database_url.config(
         default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
@@ -69,23 +71,24 @@ DATABASES = {
     )
 }
 
-# --- TẬP TIN TĨNH (WHITE NOISE) ---
+# --- TẬP TIN TĨNH (STATIC FILES) ---
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# --- CẤU HÌNH CLOUDINARY ---
-# Sử dụng os.environ.get để lấy thông tin từ mục Environment trên Render
+# --- CẤU HÌNH CLOUDINARY (MEDIA FILES) ---
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', 'djh1ag2fh'), 
     'API_KEY': os.environ.get('CLOUDINARY_API_KEY', '315465561373434'),
     'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', 'HrR9tRA24kdJmI9KaKJ3FA7vsVA')
 }
 
+# Ép buộc Django lưu Media lên Cloudinary thay vì server nội bộ
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
-MEDIA_URL = '/media/'
+# Trỏ Media URL trực tiếp về Cloudinary
+MEDIA_URL = 'https://res.cloudinary.com/djh1ag2fh/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # --- ĐIỀU HƯỚNG ---
