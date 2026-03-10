@@ -1,0 +1,94 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4 text-center">Hệ Thống Quản Trị MyHotel</h2>
+    
+    <div class="row mb-5">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">Thống kê đơn đặt phòng</div>
+                <div class="card-body">
+                    <canvas id="bookingChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">Phân bố phòng theo khu vực</div>
+                <div class="card-body">
+                    <canvas id="roomChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header bg-warning text-dark font-weight-bold">
+            Đơn đặt phòng chờ duyệt
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Khách hàng</th>
+                            <th>Phòng</th>
+                            <th>Ngày nhận</th>
+                            <th>Ngày trả</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for booking in pending_bookings %}
+                        <tr>
+                            <td>{{ booking.user.username }}</td>
+                            <td>{{ booking.room.room_number }}</td>
+                            <td>{{ booking.check_in }}</td>
+                            <td>{{ booking.check_out }}</td>
+                            <td>
+                                <a href="{% url 'manage_booking' booking.pk 'approve' %}" class="btn btn-sm btn-success">Duyệt</a>
+                                <a href="{% url 'manage_booking' booking.pk 'reject' %}" class="btn btn-sm btn-danger">Từ chối</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">Không có đơn hàng nào cần xử lý.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Biểu đồ đặt phòng
+    new Chart(document.getElementById('bookingChart'), {
+        type: 'pie',
+        data: {
+            labels: {{ booking_labels|safe }},
+            datasets: [{
+                data: {{ booking_data|safe }},
+                backgroundColor: ['#f39c12', '#2ecc71', '#e74c3c']
+            }]
+        }
+    });
+
+    // Biểu đồ phòng
+    new Chart(document.getElementById('roomChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ room_labels|safe }},
+            datasets: [{
+                label: 'Số lượng phòng',
+                data: {{ room_data|safe }},
+                backgroundColor: '#3498db'
+            }]
+        }
+    });
+</script>
+{% endblock %}
