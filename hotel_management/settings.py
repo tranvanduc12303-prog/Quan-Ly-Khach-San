@@ -1,20 +1,15 @@
 import os
 from pathlib import Path
-import pymysql
-import dj_database_url  # Thêm thư viện này
-
-# --- CẤU HÌNH MYSQL CHO PYTHON MỚI ---
-pymysql.version_info = (2, 2, 1, "final", 0)
-pymysql.install_as_MySQLdb()
+import dj_database_url
 
 # --- ĐƯỜNG DẪN CƠ SỞ ---
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # --- BẢO MẬT & DEBUG ---
-SECRET_KEY = 'django-insecure-full-clean-key-2026'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-full-clean-key-2026')
 
 # Tự động tắt Debug khi lên Render để bảo mật
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # Cho phép chạy trên mọi tên miền (quan trọng cho Render)
 ALLOWED_HOSTS = ['*']
@@ -33,7 +28,7 @@ INSTALLED_APPS = [
 # --- CÁC LỚP TRUNG GIAN (MIDDLEWARE) ---
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', # Thêm dòng này để hiện CSS trên Render
+    'whitenoise.middleware.WhiteNoiseMiddleware', # Hiển thị CSS trên Render
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -63,26 +58,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'hotel_management.wsgi.application'
 
-# --- CƠ SỞ DỮ LIỆU (TỰ ĐỘNG CHUYỂN ĐỔI) ---
+# --- CƠ SỞ DỮ LIỆU (FIX CỨNG ĐỂ KHÔNG MẤT DỮ LIỆU) ---
+# Nếu có biến môi trường DATABASE_URL (Trên Render), dùng Postgres. 
+# Nếu không (Dưới máy), dùng SQLite để đơn giản.
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'hotel_db',
-        'USER': 'root',
-        'PASSWORD': 'Tranvanduc1230399@',
-        'HOST': '127.0.0.1',
-        'PORT': '3306',
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-            'charset': 'utf8mb4',
-        },
-    }
+    'default': dj_database_url.config(
+        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
+        conn_max_age=600
+    )
 }
-
-# NẾU ĐANG CHẠY TRÊN RENDER, SỬ DỤNG POSTGRESQL TỰ ĐỘNG
-db_from_env = dj_database_url.config(conn_max_age=600)
-if db_from_env:
-    DATABASES['default'] = db_from_env
 
 # --- KIỂM TRA MẬT KHẨU ---
 AUTH_PASSWORD_VALIDATORS = [
