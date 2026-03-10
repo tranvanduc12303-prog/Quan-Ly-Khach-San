@@ -15,7 +15,7 @@
             <div class="col-md-9">
                 <div class="input-group">
                     <span class="input-group-text bg-dark border-secondary text-warning"><i class="bi bi-search"></i></span>
-                    <input type="text" name="q" class="form-control form-control-lg bg-dark text-white border-secondary" placeholder="Nhập địa điểm, tên khách sạn..." value="{{ query|default:'' }}" style="border-radius: 0 12px 12px 0;">
+                    <input type="text" name="q" class="form-control form-control-lg bg-dark text-white border-secondary shadow-none" placeholder="Nhập địa điểm, tên khách sạn..." value="{{ query|default:'' }}" style="border-radius: 0 12px 12px 0;">
                 </div>
             </div>
             <div class="col-md-3">
@@ -30,10 +30,10 @@
             {% for dest in destinations %}
             <div style="flex: 0 0 auto; width: 220px;">
                 <a href="{% url 'home' %}?q={{ dest.name }}" class="text-decoration-none">
-                    <div class="card bg-transparent border-0">
+                    <div class="card bg-transparent border-0 dest-card">
                         <div class="overflow-hidden rounded-4 position-relative" style="height: 250px;">
                             {% if dest.image %}
-                                <img src="{{ dest.image.url }}" class="w-100 h-100" style="object-fit: cover;">
+                                <img src="{{ dest.image.url }}" class="w-100 h-100" style="object-fit: cover; transition: 0.5s;">
                             {% else %}
                                 <div class="w-100 h-100 bg-secondary d-flex align-items-center justify-content-center text-white">No Image</div>
                             {% endif %}
@@ -69,7 +69,12 @@
                         {% else %}
                             <div style="height: 220px;" class="bg-secondary d-flex align-items-center justify-content-center text-white">No Image</div>
                         {% endif %}
-                        <span class="position-absolute top-0 end-0 m-2 badge bg-success px-2 py-1">CÒN TRỐNG</span>
+                        
+                        {% if room.is_available %}
+                            <span class="position-absolute top-0 end-0 m-2 badge bg-success px-2 py-1">CÒN TRỐNG</span>
+                        {% else %}
+                            <span class="position-absolute top-0 end-0 m-2 badge bg-danger px-2 py-1">HẾT PHÒNG</span>
+                        {% endif %}
                     </div>
                     <div class="card-body bg-dark text-white border-top border-secondary">
                         <h5 class="fw-bold">Phòng {{ room.room_number }}</h5>
@@ -82,27 +87,27 @@
         {% empty %}
         <div class="col-12 text-center py-5 text-muted border border-secondary rounded-4 mx-2">
             <i class="bi bi-house-exclamation fs-1 text-warning"></i>
-            <p class="mt-2">Hiện tại hệ thống đang cập nhật danh sách phòng. Bạn vui lòng quay lại sau!</p>
+            <p class="mt-2">Hiện tại không tìm thấy phòng phù hợp. Bạn hãy thử tìm kiếm khác nhé!</p>
         </div>
         {% endfor %}
     </div>
 </div>
 
 <div id="chatbot-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;">
-    <button id="chatbot-toggle" class="btn btn-yellow rounded-circle shadow-lg p-3" style="width: 60px; height: 60px;">
-        <i class="bi bi-chat-dots-fill fs-3"></i>
+    <button id="chatbot-toggle" class="btn btn-yellow rounded-circle shadow-lg p-3 bounce-button" style="width: 60px; height: 60px;">
+        <i class="bi bi-robot fs-3"></i>
     </button>
     
     <div id="chatbot-box" class="card shadow-lg d-none" style="width: 320px; position: absolute; bottom: 75px; right: 0; background: #1a1a1a; border: 1px solid #ffc107; border-radius: 15px; overflow: hidden;">
         <div class="card-header bg-warning d-flex justify-content-between align-items-center border-0">
-            <span class="fw-bold text-dark"><i class="bi bi-robot"></i> Trợ lý MyHotel</span>
+            <span class="fw-bold text-dark"><i class="bi bi-chat-dots-fill"></i> Trợ lý MyHotel AI</span>
             <button type="button" class="btn-close shadow-none" id="chatbot-close"></button>
         </div>
         <div id="chat-messages" class="card-body overflow-auto p-3" style="height: 350px; background: #121212; scroll-behavior: smooth;">
             <div class="mb-2">
-                <small class="bg-dark text-white p-2 rounded d-inline-block border border-secondary">
+                <div class="bg-dark text-white p-2 rounded d-inline-block border border-secondary" style="max-width: 85%; font-size: 0.9rem;">
                     Chào bạn! Mình là AI của MyHotel. Mình có thể giúp bạn tìm phòng hoặc giải đáp dịch vụ khách sạn.
-                </small>
+                </div>
             </div>
         </div>
         <div class="card-footer bg-dark border-top border-secondary p-2">
@@ -117,12 +122,15 @@
 <style>
     body { background-color: #0b0b0b !important; color: #fff; }
     .btn-yellow { background-color: #ffc107; color: #000; border: none; }
-    .btn-yellow:hover { background-color: #e0a800; color: #000; }
-    .room-card { transition: 0.3s; border: 1px solid #333 !important; background-color: #1a1a1a; }
-    .room-card:hover { transform: translateY(-5px); border-color: #ffc107 !important; }
-    #chat-messages::-webkit-scrollbar { width: 5px; }
+    .btn-yellow:hover { background-color: #e0a800; color: #000; transform: scale(1.05); }
+    .room-card { transition: 0.3s; border: 1px solid #333 !important; background-color: #1a1a1a; overflow: hidden; }
+    .room-card:hover { transform: translateY(-5px); border-color: #ffc107 !important; box-shadow: 0 10px 20px rgba(255,193,7,0.2) !important; }
+    .dest-card:hover img { transform: scale(1.1); }
+    #chat-messages::-webkit-scrollbar { width: 4px; }
     #chat-messages::-webkit-scrollbar-track { background: #121212; }
     #chat-messages::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+    .bounce-button { animation: bounce 2s infinite; }
+    @keyframes bounce { 0%, 20%, 50%, 80%, 100% {transform: translateY(0);} 40% {transform: translateY(-5px);} 60% {transform: translateY(-3px);} }
 </style>
 
 <script>
@@ -134,6 +142,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const input = document.getElementById('chat-input');
     const messages = document.getElementById('chat-messages');
 
+    // Mở/Đóng chatbot
     toggle.onclick = () => {
         box.classList.toggle('d-none');
         input.focus();
@@ -144,34 +153,45 @@ document.addEventListener('DOMContentLoaded', function() {
         const text = input.value.trim();
         if (!text) return;
 
-        messages.innerHTML += `<div class="text-end mb-2"><small class="bg-warning text-dark p-2 rounded d-inline-block shadow-sm">${text}</small></div>`;
+        // Hiển thị tin nhắn của User
+        messages.innerHTML += `
+            <div class="text-end mb-2">
+                <div class="bg-warning text-dark p-2 rounded d-inline-block shadow-sm" style="max-width: 85%; font-size: 0.9rem;">
+                    ${text}
+                </div>
+            </div>`;
         input.value = '';
+        messages.scrollTop = messages.scrollHeight;
         
+        // Hiển thị trạng thái đang chờ
         const loadingId = "loading-" + Date.now();
         messages.innerHTML += `
             <div class="mb-2" id="${loadingId}">
-                <small class="bg-dark text-muted p-2 rounded d-inline-block border border-secondary">
-                    <span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang trả lời...
-                </small>
+                <div class="bg-dark text-muted p-2 rounded d-inline-block border border-secondary" style="font-size: 0.85rem;">
+                    <span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang xử lý...
+                </div>
             </div>`;
         messages.scrollTop = messages.scrollHeight;
 
         try {
+            // Encode câu hỏi để xử lý tiếng Việt trên URL chuẩn xác
             const response = await fetch(`/ai-assistant/?message=${encodeURIComponent(text)}`);
-            if (!response.ok) throw new Error("Server error");
             const data = await response.json();
             
             const loadingElement = document.getElementById(loadingId);
             if (loadingElement) loadingElement.remove();
 
+            // Hiển thị câu trả lời từ AI
             messages.innerHTML += `
                 <div class="mb-2">
-                    <small class="bg-dark text-white p-2 rounded d-inline-block border border-secondary shadow-sm">${data.reply}</small>
+                    <div class="bg-dark text-white p-2 rounded d-inline-block border border-secondary shadow-sm" style="max-width: 85%; font-size: 0.9rem;">
+                        ${data.reply}
+                    </div>
                 </div>`;
         } catch (e) {
             const loadingElement = document.getElementById(loadingId);
             if (loadingElement) {
-                loadingElement.innerHTML = `<small class="text-danger border border-danger p-2 rounded d-inline-block">AI đang bận, hãy thử lại sau nhé!</small>`;
+                loadingElement.innerHTML = `<div class="text-danger border border-danger p-2 rounded d-inline-block" style="font-size: 0.85rem;">Hệ thống AI đang bận, bạn hỏi lại sau 1 phút nhé!</div>`;
             }
         }
         messages.scrollTop = messages.scrollHeight;
