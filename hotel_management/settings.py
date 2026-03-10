@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import pymysql
+import dj_database_url  # Thêm thư viện này
 
 # --- CẤU HÌNH MYSQL CHO PYTHON MỚI ---
 pymysql.version_info = (2, 2, 1, "final", 0)
@@ -11,7 +12,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # --- BẢO MẬT & DEBUG ---
 SECRET_KEY = 'django-insecure-full-clean-key-2026'
-DEBUG = True
+
+# Tự động tắt Debug khi lên Render để bảo mật
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+
+# Cho phép chạy trên mọi tên miền (quan trọng cho Render)
 ALLOWED_HOSTS = ['*']
 
 # --- DANH SÁCH ỨNG DỤNG ---
@@ -22,14 +27,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
-    # App chính của bạn
     'core',
 ]
 
 # --- CÁC LỚP TRUNG GIAN (MIDDLEWARE) ---
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', # Thêm dòng này để hiện CSS trên Render
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -59,13 +63,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'hotel_management.wsgi.application'
 
-# --- CƠ SỞ DỮ LIỆU (MYSQL) ---
+# --- CƠ SỞ DỮ LIỆU (TỰ ĐỘNG CHUYỂN ĐỔI) ---
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'hotel_db',
         'USER': 'root',
-        'PASSWORD': '', # XAMPP mặc định để trống
+        'PASSWORD': 'Tranvanduc1230399@',
         'HOST': '127.0.0.1',
         'PORT': '3306',
         'OPTIONS': {
@@ -74,6 +78,11 @@ DATABASES = {
         },
     }
 }
+
+# NẾU ĐANG CHẠY TRÊN RENDER, SỬ DỤNG POSTGRESQL TỰ ĐỘNG
+db_from_env = dj_database_url.config(conn_max_age=600)
+if db_from_env:
+    DATABASES['default'] = db_from_env
 
 # --- KIỂM TRA MẬT KHẨU ---
 AUTH_PASSWORD_VALIDATORS = [
@@ -89,16 +98,19 @@ TIME_ZONE = 'Asia/Ho_Chi_Minh'
 USE_I18N = True
 USE_TZ = True
 
-# --- TẬP TIN TĨNH (STATIC FILES: CSS, JS, IMAGES) ---
+# --- TẬP TIN TĨNH (STATIC FILES) ---
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
-# --- TẬP TIN MEDIA (ẢNH PHÒNG, ẢNH ĐẠI DIỆN) ---
+# Tối ưu hóa file tĩnh cho Render (WhiteNoise)
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# --- TẬP TIN MEDIA ---
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# --- ĐIỀU HƯỚNG ĐĂNG NHẬP ---
+# --- ĐIỀU HƯỚNG ---
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'home'

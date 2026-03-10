@@ -19,3 +19,4 @@ urlpatterns = [
     path('login/', auth_views.LoginView.as_view(template_name='core/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='home'), name='logout'), # Thêm next_page để về trang chủ
 ]
+path('setup-db/', views.setup_database),

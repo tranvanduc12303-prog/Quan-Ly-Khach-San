@@ -107,3 +107,15 @@ def cancel_booking(request, pk):
     else:
         messages.error(request, "Không thể hủy đơn đã duyệt.")
     return redirect('my_bookings')
+from django.http import HttpResponse
+from django.core.management import call_command
+from django.contrib.auth.models import User
+
+def setup_database(request):
+    # Chạy migrate
+    call_command('migrate')
+    # Tạo admin nếu chưa có
+    if not User.objects.filter(username='admin_moi').exists():
+        User.objects.create_superuser('admin_moi', 'admin@example.com', 'matkhau123')
+        return HttpResponse("Đã migrate và tạo tài khoản admin_moi thành công!")
+    return HttpResponse("Hệ thống đã sẵn sàng.")
