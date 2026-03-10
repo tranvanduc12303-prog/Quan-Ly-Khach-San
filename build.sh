@@ -15,3 +15,4 @@ python manage.py migrate
 # User: admin_render | Pass: matkhau123
 python manage.py shell -c "from django.contrib.auth.models import User; User.objects.filter(username='admin_render').exists() or User.objects.create_superuser('admin_render', 'admin@example.com', 'matkhau123')"
 python manage.py loaddata data.json
+pip install -r requirements.txt
