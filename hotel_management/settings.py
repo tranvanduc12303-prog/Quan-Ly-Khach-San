@@ -1,37 +1,35 @@
-import pymysql
 import os
 from pathlib import Path
+import pymysql
 
-# Giữ nguyên để tránh lỗi mysqlclient trên Render
+# --- CẤU HÌNH MYSQL CHO PYTHON MỚI ---
 pymysql.version_info = (2, 2, 1, "final", 0)
 pymysql.install_as_MySQLdb()
 
+# --- ĐƯỜNG DẪN CƠ SỞ ---
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-pp57^v&k7h-9_8r^^j)toornmvak23u)h^4xsy-k-$o97s3wpm'
+# --- BẢO MẬT & DEBUG ---
+SECRET_KEY = 'django-insecure-full-clean-key-2026'
+DEBUG = True
+ALLOWED_HOSTS = ['*']
 
-# --- TỰ ĐỘNG NHẬN DIỆN MÔI TRƯỜNG ---
-# Nếu chạy trên Render (có biến RENDER), DEBUG sẽ là False. 
-# Nếu chạy ở máy nhà (Local), DEBUG sẽ là True để bạn thấy lỗi cụ thể.
-DEBUG = 'RENDER' not in os.environ 
-
-# THÊM ĐỦ CÁC CẤU HÌNH HOST
-ALLOWED_HOSTS = ['quan-ly-khach-san-nhom13.onrender.com', 'localhost', '127.0.0.1', '*']
-
+# --- DANH SÁCH ỨNG DỤNG ---
 INSTALLED_APPS = [
-    'core',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'whitenoise.runserver_nostatic', # Hỗ trợ file tĩnh
+    
+    # App chính của bạn
+    'core',
 ]
 
+# --- CÁC LỚP TRUNG GIAN (MIDDLEWARE) ---
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', # QUAN TRỌNG ĐỂ HIỆN CSS/IMAGE
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -42,10 +40,11 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'hotel_management.urls'
 
+# --- GIAO DIỆN (TEMPLATES) ---
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'], 
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -53,7 +52,6 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'django.template.context_processors.media',
             ],
         },
     },
@@ -61,14 +59,23 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'hotel_management.wsgi.application'
 
-# SỬ DỤNG SQLITE ĐỂ KHỚP VỚI FILE ĐÃ PUSH LÊN GITHUB
+# --- CƠ SỞ DỮ LIỆU (MYSQL) ---
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'hotel_db',
+        'USER': 'root',
+        'PASSWORD': '', # XAMPP mặc định để trống
+        'HOST': '127.0.0.1',
+        'PORT': '3306',
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            'charset': 'utf8mb4',
+        },
     }
 }
 
+# --- KIỂM TRA MẬT KHẨU ---
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',},
@@ -76,23 +83,24 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',},
 ]
 
+# --- ĐA NGÔN NGỮ & THỜI GIAN ---
 LANGUAGE_CODE = 'vi'
 TIME_ZONE = 'Asia/Ho_Chi_Minh'
 USE_I18N = True
 USE_TZ = True
 
-# --- CẤU HÌNH STATIC VÀ MEDIA ---
-STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles' 
+# --- TẬP TIN TĨNH (STATIC FILES: CSS, JS, IMAGES) ---
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# Giữ nguyên cấu hình này để tránh lỗi Manifest khi deploy
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
-
+# --- TẬP TIN MEDIA (ẢNH PHÒNG, ẢNH ĐẠI DIỆN) ---
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# --- ĐIỀU HƯỚNG ĐĂNG NHẬP ---
+LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'home'
-LOGIN_URL = 'login'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
