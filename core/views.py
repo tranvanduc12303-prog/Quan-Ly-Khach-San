@@ -20,24 +20,26 @@ def is_admin(user):
 # --- 1. HỆ THỐNG AI (GEMINI) ---
 def ai_assistant(request):
     """
-    Xử lý Chatbot sử dụng Gemini Pro để đảm bảo tương thích API Version.
+    Xử lý Chatbot sử dụng Gemini 1.5 Flash mới nhất để tránh lỗi 404 v1beta.
     """
     user_message = request.GET.get('message', '').strip()
     
     if not user_message:
         return JsonResponse({'reply': "Chào bạn! MyHotel có thể giúp gì cho bạn ạ?"}, json_dumps_params={'ensure_ascii': False})
 
+    # Lấy Key từ Environment của Render
     api_key = os.environ.get('GOOGLE_API_KEY')
     if not api_key:
-        return JsonResponse({'reply': "Hệ thống chưa cấu hình API Key!"}, json_dumps_params={'ensure_ascii': False})
+        return JsonResponse({'reply': "Hệ thống chưa cấu hình API Key trên Render!"}, json_dumps_params={'ensure_ascii': False})
 
     try:
+        # Cấu hình API
         genai.configure(api_key=api_key.strip())
         
-        # Sửa tên model từ 'gemini-1.5-flash' thành 'gemini-pro' để tránh lỗi 404 v1beta
-        model = genai.GenerativeModel('gemini-pro')
+        # SỬA LỖI 404: Chuyển sang model 1.5 Flash (ổn định nhất hiện tại)
+        model = genai.GenerativeModel('gemini-1.5-flash')
         
-        # Lấy dữ liệu thực tế từ Database
+        # Lấy dữ liệu thực tế từ Database để AI trả lời thông minh hơn
         rooms = Room.objects.filter(is_available=True)[:3]
         if rooms.exists():
             room_list = [f"Phòng {r.room_number} tại {r.address} giá {r.price} VNĐ" for r in rooms]
@@ -45,22 +47,26 @@ def ai_assistant(request):
         else:
             context_rooms = "Hiện tại khách sạn đã hết phòng trống."
 
+        # Tạo Prompt hướng dẫn AI
         prompt = (
             f"Bạn là 'Trợ lý ảo MyHotel'. {context_rooms}. "
-            f"Hãy trả lời bằng tiếng Việt, lịch sự, ngắn dưới 60 từ. "
-            f"Câu hỏi: {user_message}"
+            f"Hãy trả lời bằng tiếng Việt, phong cách lịch sự, ngắn gọn (dưới 60 từ). "
+            f"Câu hỏi của khách: {user_message}"
         )
         
+        # Gọi Gemini xử lý
         response = model.generate_content(prompt)
         
         if response and response.text:
+            # json_dumps_params={'ensure_ascii': False} để hiển thị Tiếng Việt chuẩn
             return JsonResponse({'reply': response.text.strip()}, json_dumps_params={'ensure_ascii': False})
             
-        return JsonResponse({'reply': "Mình chưa hiểu ý bạn, bạn hỏi lại nhé!"}, json_dumps_params={'ensure_ascii': False})
+        return JsonResponse({'reply': "Mình chưa hiểu ý bạn, bạn có thể hỏi lại không?"}, json_dumps_params={'ensure_ascii': False})
         
     except Exception as e:
+        # In lỗi chi tiết ra Render Logs để theo dõi
         print(f"--- AI ERROR: {str(e)} ---")
-        return JsonResponse({'reply': "Hệ thống AI đang bận, bạn thử lại sau nhé!"}, json_dumps_params={'ensure_ascii': False})
+        return JsonResponse({'reply': "AI đang bận một chút, bạn thử lại sau nhé!"}, json_dumps_params={'ensure_ascii': False})
 
 # --- 2. TRANG CHỦ & TÌM KIẾM ---
 def home(request):
