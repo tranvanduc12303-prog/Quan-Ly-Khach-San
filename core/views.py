@@ -20,63 +20,70 @@ def is_admin(user):
 # --- 1. HỆ THỐNG AI (GEMINI) ---
 def ai_assistant(request):
     """
-    Xử lý Chatbot sử dụng Gemini 1.5 Flash.
+    Xử lý Chatbot sử dụng Gemini 1.5 Flash với hỗ trợ Tiếng Việt đầy đủ.
     """
     user_message = request.GET.get('message', '').strip()
     
     if not user_message:
-        return JsonResponse({'reply': "Chào bạn! MyHotel có thể giúp gì cho bạn ạ?"})
+        return JsonResponse({'reply': "Chào bạn! MyHotel có thể giúp gì cho bạn ạ?"}, json_dumps_params={'ensure_ascii': False})
 
+    # Lấy Key từ biến môi trường GOOGLE_API_KEY (Bạn phải đổi tên trên Render thành GOOGLE_API_KEY)
     api_key = os.environ.get('GOOGLE_API_KEY')
+    
     if not api_key:
-        return JsonResponse({'reply': "Chatbot đang bảo trì hệ thống API, vui lòng thử lại sau."})
+        return JsonResponse({'reply': "Chatbot đang bảo trì hệ thống API, vui lòng thử lại sau."}, json_dumps_params={'ensure_ascii': False})
 
     try:
+        # Cấu hình API với Key sạch
         genai.configure(api_key=api_key.strip())
         
-        # Sử dụng model Flash cho tốc độ phản hồi nhanh nhất
+        # Sử dụng model Flash 1.5 để đạt tốc độ cao nhất trên Render
         model = genai.GenerativeModel('gemini-1.5-flash')
         
-        # Lấy tối đa 3 phòng trống để làm ngữ cảnh (Context)
+        # Lấy dữ liệu thực tế từ Database để AI trả lời chính xác
         rooms = Room.objects.filter(is_available=True)[:3]
         if rooms.exists():
             room_list = [f"Phòng {r.room_number} tại {r.address} giá {r.price} VNĐ" for r in rooms]
-            context_rooms = "Các phòng còn trống: " + ", ".join(room_list)
+            context_rooms = "Các phòng còn trống hiện có: " + ", ".join(room_list)
         else:
-            context_rooms = "Hiện tại khách sạn đã hết phòng trống."
+            context_rooms = "Hiện tại tất cả các phòng đều đã được đặt kín."
 
+        # Tạo Prompt hướng dẫn AI
         prompt = (
             f"Bạn là 'Trợ lý ảo MyHotel'. {context_rooms}. "
-            f"Hãy trả lời khách hàng bằng tiếng Việt, lịch sự, ngắn gọn dưới 50 từ. "
-            f"Nếu khách hỏi về phòng, hãy ưu tiên thông tin trên. "
-            f"Khách hỏi: {user_message}"
+            f"Hãy trả lời khách hàng bằng tiếng Việt, phong cách lịch sự, thân thiện và ngắn gọn (dưới 60 từ). "
+            f"Nếu khách hỏi về phòng, hãy cung cấp thông tin phòng trống ở trên. "
+            f"Câu hỏi của khách: {user_message}"
         )
         
         response = model.generate_content(prompt)
         
         if response and response.text:
-            return JsonResponse({'reply': response.text.strip()})
-        return JsonResponse({'reply': "Xin lỗi, mình chưa hiểu ý bạn. Bạn có thể hỏi rõ hơn không?"})
+            # json_dumps_params={'ensure_ascii': False} để hiển thị tiếng Việt chuẩn
+            return JsonResponse({'reply': response.text.strip()}, json_dumps_params={'ensure_ascii': False})
+            
+        return JsonResponse({'reply': "Xin lỗi, mình chưa hiểu ý bạn. Bạn có thể hỏi rõ hơn về phòng hoặc dịch vụ không?"}, json_dumps_params={'ensure_ascii': False})
         
     except Exception as e:
         print(f"--- AI ERROR: {str(e)} ---")
-        return JsonResponse({'reply': "Mình hơi mệt một chút, bạn nhắn lại sau ít phút nhé!"})
+        # Trả về câu thông báo lỗi thân thiện thay vì mã Unicode khó hiểu
+        return JsonResponse({'reply': "Hệ thống AI đang bận xử lý, bạn vui lòng nhắn lại sau giây lát nhé!"}, json_dumps_params={'ensure_ascii': False})
 
 # --- 2. TRANG CHỦ & TÌM KIẾM ---
 def home(request):
     query = request.GET.get('q', '').strip()
     destinations = Destination.objects.all()
-    # Hiển thị tất cả phòng nhưng đánh dấu trạng thái
-    rooms_available = Room.objects.all().order_by('-is_available')
+    # Hiển thị tất cả phòng, ưu tiên phòng còn trống lên đầu
+    rooms_list = Room.objects.all().order_by('-is_available', 'price')
     
     if query:
-        rooms = rooms_available.filter(
+        rooms = rooms_list.filter(
             Q(room_number__icontains=query) |
             Q(address__icontains=query) |
             Q(description__icontains=query)
         ).distinct()
     else:
-        rooms = rooms_available
+        rooms = rooms_list
 
     return render(request, 'core/home.html', {
         'rooms': rooms,
@@ -181,12 +188,12 @@ def manage_booking(request, pk, action):
 
 # --- 6. KHỞI TẠO CƠ SỞ DỮ LIỆU ---
 def setup_database(request):
-    """Đồng bộ database và tạo Admin nhanh"""
+    """Đồng bộ database và tạo Admin nhanh cho PostgreSQL trên Render"""
     try:
         call_command('migrate')
-        if not User.objects.filter(username='admin_render').exists():
-            User.objects.create_superuser('admin_render', 'admin@hotel.com', 'matkhau123')
-            return HttpResponse("Tạo Admin thành công! User: admin_render | Pass: matkhau123")
-        return HttpResponse("Hệ thống đã đồng bộ dữ liệu PostgreSQL.")
+        if not User.objects.filter(username='admin_nhom13').exists():
+            User.objects.create_superuser('admin_nhom13', 'admin@hotel.com', 'nhom13_hotel')
+            return HttpResponse("Khởi tạo thành công! User: admin_nhom13 | Pass: nhom13_hotel")
+        return HttpResponse("Hệ thống đã đồng bộ dữ liệu PostgreSQL thành công.")
     except Exception as e:
         return HttpResponse(f"Lỗi khởi tạo: {str(e)}")
