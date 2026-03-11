@@ -1,5 +1,5 @@
 import os
-import google.generativeai as genai
+from groq import Groq  # Thư viện AI mới
 from datetime import datetime
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -17,27 +17,25 @@ from .models import Room, Booking, Destination, Review
 def is_admin(user):
     return user.is_authenticated and user.is_staff
 
-# --- 1. HỆ THỐNG AI (GEMINI) ---
+# --- 1. HỆ THỐNG AI (SỬ DỤNG GROQ) ---
 def ai_assistant(request):
     """
-    Xử lý Chatbot sử dụng Gemini 1.5 Flash với đường dẫn model chuẩn xác.
+    Xử lý Chatbot sử dụng Groq Llama 3 - Tốc độ cực nhanh và miễn phí.
     """
     user_message = request.GET.get('message', '').strip()
     
     if not user_message:
         return JsonResponse({'reply': "Chào bạn! MyHotel có thể giúp gì cho bạn ạ?"}, json_dumps_params={'ensure_ascii': False})
 
-    api_key = os.environ.get('GOOGLE_API_KEY')
+    # Lấy API Key từ Environment Variable trên Render
+    api_key = os.environ.get('GROQ_API_KEY')
     if not api_key:
-        return JsonResponse({'reply': "Hệ thống chưa cấu hình API Key trên Render!"}, json_dumps_params={'ensure_ascii': False})
+        return JsonResponse({'reply': "Hệ thống chưa cấu hình GROQ_API_KEY!"}, json_dumps_params={'ensure_ascii': False})
 
     try:
-        genai.configure(api_key=api_key.strip())
+        client = Groq(api_key=api_key.strip())
         
-        # FIX TRIỆT ĐỂ LỖI 404: Thêm tiền tố 'models/' vào trước tên model
-        # Sử dụng 'models/gemini-1.5-flash-latest' để đảm bảo lấy bản cập nhật nhất
-        model = genai.GenerativeModel('models/gemini-1.5-flash-latest')
-        
+        # Lấy danh sách phòng trống để AI tư vấn thông minh hơn
         rooms = Room.objects.filter(is_available=True)[:3]
         if rooms.exists():
             room_list = [f"Phòng {r.room_number} tại {r.address} giá {r.price} VNĐ" for r in rooms]
@@ -45,18 +43,27 @@ def ai_assistant(request):
         else:
             context_rooms = "Hiện tại khách sạn đã hết phòng trống."
 
+        # Cấu hình Prompt
         prompt = (
             f"Bạn là 'Trợ lý ảo MyHotel'. {context_rooms}. "
             f"Hãy trả lời bằng tiếng Việt, phong cách lịch sự, ngắn gọn (dưới 60 từ). "
             f"Câu hỏi của khách: {user_message}"
         )
         
-        response = model.generate_content(prompt)
+        # Gọi API Groq
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ],
+            model="llama3-8b-8192", # Model mạnh và miễn phí
+        )
         
-        if response and response.text:
-            return JsonResponse({'reply': response.text.strip()}, json_dumps_params={'ensure_ascii': False})
-            
-        return JsonResponse({'reply': "Mình chưa hiểu ý bạn, bạn có thể hỏi lại không?"}, json_dumps_params={'ensure_ascii': False})
+        response_text = chat_completion.choices[0].message.content
+        
+        return JsonResponse({'reply': response_text.strip()}, json_dumps_params={'ensure_ascii': False})
         
     except Exception as e:
         print(f"--- AI ERROR: {str(e)} ---")
@@ -149,14 +156,12 @@ def cancel_booking(request, pk):
 @user_passes_test(is_admin)
 def admin_dashboard(request):
     booking_stats = Booking.objects.values('status').annotate(total=Count('id'))
-    room_stats = Room.objects.values('address').annotate(total=Count('id'))
+    room_stats = Room.objects.all().count()
     pending_bookings = Booking.objects.filter(status='pending').order_by('-created_at')
 
     context = {
         'booking_labels': [item['status'].capitalize() for item in booking_stats],
         'booking_data': [item['total'] for item in booking_stats],
-        'room_labels': [item['address'] for item in room_stats],
-        'room_data': [item['total'] for item in room_stats],
         'pending_bookings': pending_bookings
     }
     return render(request, 'core/dashboard.html', context)
