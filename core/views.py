@@ -1,5 +1,5 @@
 import os
-from groq import Groq  # Thư viện AI mới
+from groq import Groq 
 from datetime import datetime
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -52,17 +52,11 @@ def ai_assistant(request):
         
         # Gọi API Groq
         chat_completion = client.chat.completions.create(
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt,
-                }
-            ],
-            model="llama3-8b-8192", # Model mạnh và miễn phí
+            messages=[{"role": "user", "content": prompt}],
+            model="llama3-8b-8192",
         )
         
         response_text = chat_completion.choices[0].message.content
-        
         return JsonResponse({'reply': response_text.strip()}, json_dumps_params={'ensure_ascii': False})
         
     except Exception as e:
@@ -72,7 +66,7 @@ def ai_assistant(request):
 # --- 2. TRANG CHỦ & TÌM KIẾM ---
 def home(request):
     query = request.GET.get('q', '').strip()
-    destinations = Destination.objects.all()
+    destinations = Destination.objects.annotate(room_count=Count('rooms'))
     rooms_list = Room.objects.all().order_by('-is_available', 'price')
     
     if query:
@@ -156,7 +150,6 @@ def cancel_booking(request, pk):
 @user_passes_test(is_admin)
 def admin_dashboard(request):
     booking_stats = Booking.objects.values('status').annotate(total=Count('id'))
-    room_stats = Room.objects.all().count()
     pending_bookings = Booking.objects.filter(status='pending').order_by('-created_at')
 
     context = {
