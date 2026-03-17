@@ -8,7 +8,7 @@ from django.db.models import Q, Count, Sum
 from django.http import JsonResponse, HttpResponse
 from django.core.management import call_command
 
-# Import Groq an toàn để không gây lỗi 500 nếu chưa cài thư viện
+# Import Groq an toàn để hệ thống không sập nếu thiếu thư viện trên Render
 try:
     from groq import Groq
 except ImportError:
@@ -40,10 +40,10 @@ def home(request):
         'query': query
     })
 
-# --- 2. THANH TOÁN QR (SỬA LỖI 500) ---
+# --- 2. THANH TOÁN QR (ĐÃ SỬA LỖI 500) ---
 @login_required
 def payment_page(request, booking_id):
-    """Hiển thị mã QR VietQR để khách hàng thanh toán"""
+    """Hiển thị mã QR VietQR đồng bộ với payment.html của bạn"""
     booking = get_object_or_404(Booking, id=booking_id, user=request.user)
     
     # Thông tin tài khoản nhận (Thay đổi theo ý bạn)
@@ -51,29 +51,35 @@ def payment_page(request, booking_id):
     ACCOUNT_NO = "0987654321" 
     ACCOUNT_NAME = "KHACH SAN MYHOTEL"
     
-    # Đảm bảo số tiền là số nguyên để tránh lỗi URL QR
+    # 1. Xử lý số tiền (ép kiểu int để tránh lỗi 500)
     amount = int(booking.room.price)
     
-    # Tạo link QR động theo tiêu chuẩn VietQR
-    qr_url = f"https://img.vietqr.io/image/{BANK_ID}-{ACCOUNT_NO}-compact2.png?amount={amount}&addInfo=MYHOTEL{booking.id}&accountName={ACCOUNT_NAME}"
+    # 2. Nội dung chuyển khoản (Đồng bộ với biến {{ description }} trong HTML)
+    description = f"MYHOTEL{booking.id}"
     
+    # 3. Tạo link QR động theo tiêu chuẩn VietQR
+    qr_url = f"https://img.vietqr.io/image/{BANK_ID}-{ACCOUNT_NO}-compact2.png?amount={amount}&addInfo={description}&accountName={ACCOUNT_NAME}"
+    
+    # 4. Trả về các biến khớp chính xác với file HTML của bạn
     return render(request, 'core/payment.html', {
         'booking': booking, 
-        'qr_url': qr_url
+        'qr_url': qr_url,
+        'description': description,
+        'total_price': amount  # Biến này để thay thế cho {{ booking.total_price }}
     })
 
 # --- 3. QUẢN TRỊ (DASHBOARD TIẾNG VIỆT) ---
 @user_passes_test(is_admin)
 def admin_dashboard(request):
     """Thống kê doanh thu và dữ liệu biểu đồ nhãn Tiếng Việt"""
-    # Tính tổng doanh thu từ các đơn đã duyệt hoặc hoàn thành
+    # Tính tổng doanh thu
     total_revenue = Booking.objects.filter(
         status__in=['approved', 'completed']
     ).aggregate(total=Sum('room__price'))['total'] or 0
     
     pending_bookings = Booking.objects.filter(status='pending').select_related('user', 'room')
 
-    # Việt hóa nhãn biểu đồ Trạng thái (Dùng cho Chart.js)
+    # Việt hóa nhãn biểu đồ Trạng thái
     status_map = {
         'pending': 'Chờ duyệt', 
         'approved': 'Đã duyệt', 
@@ -108,7 +114,6 @@ def room_detail(request, pk):
     reviews = room.reviews.select_related('user').order_by('-created_at')
     
     if request.method == 'POST':
-        # Xử lý Đặt phòng
         if 'book_room' in request.POST:
             if not request.user.is_authenticated:
                 return redirect('login')
@@ -127,7 +132,6 @@ def room_detail(request, pk):
             except:
                 messages.error(request, "Lỗi định dạng ngày tháng.")
 
-        # Xử lý Gửi đánh giá
         elif 'submit_review' in request.POST:
             if request.user.is_authenticated:
                 Review.objects.create(
@@ -147,7 +151,7 @@ def room_detail(request, pk):
 # --- 5. QUẢN LÝ ĐƠN HÀNG (DÀNH CHO ADMIN) ---
 @user_passes_test(is_admin)
 def manage_booking(request, pk, action):
-    """Duyệt hoặc từ chối đơn hàng nhanh từ Dashboard"""
+    """Duyệt hoặc từ chối đơn hàng từ Dashboard"""
     booking = get_object_or_404(Booking, pk=pk)
     if action == 'approve':
         booking.status, booking.room.is_available = 'approved', False
@@ -165,22 +169,21 @@ def ai_assistant(request):
     api_key = os.environ.get('GROQ_API_KEY')
     
     if not user_msg or not api_key or not Groq:
-        return JsonResponse({'reply': "Chào bạn, MyHotel có thể giúp gì cho bạn?"})
+        return JsonResponse({'reply': "Chào bạn, tôi có thể giúp gì cho bạn?"})
     
     try:
         client = Groq(api_key=api_key)
         chat = client.chat.completions.create(
-            messages=[{"role": "user", "content": f"Bạn là lễ tân khách sạn, trả lời tiếng Việt: {user_msg}"}],
+            messages=[{"role": "user", "content": f"Lễ tân khách sạn trả lời tiếng Việt: {user_msg}"}],
             model="llama3-8b-8192",
         )
         return JsonResponse({'reply': chat.choices[0].message.content})
     except:
-        return JsonResponse({'reply': "AI hiện đang bảo trì, vui lòng quay lại sau."})
+        return JsonResponse({'reply': "AI hiện đang bảo trì."})
 
 # --- 7. HỆ THỐNG & KHÁCH HÀNG ---
 @login_required
 def my_bookings(request):
-    """Xem danh sách đơn hàng của khách hàng hiện tại"""
     bookings = Booking.objects.filter(user=request.user).order_by('-created_at')
     return render(request, 'core/my_bookings.html', {'bookings': bookings})
 

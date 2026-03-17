@@ -14,8 +14,10 @@ urlpatterns = [
     # --- 2. QUẢN LÝ DÀNH CHO KHÁCH HÀNG ---
     # Xem lịch sử đơn hàng của cá nhân
     path('my-bookings/', views.my_bookings, name='my_bookings'),
-    # Trang hiển thị mã QR thanh toán VietQR (Khắc phục lỗi 500)
+    # Trang hiển thị mã QR thanh toán VietQR (Sửa lỗi 500)
     path('payment/<int:booking_id>/', views.payment_page, name='payment_page'),
+    # (Bổ sung) Đường dẫn để xử lý khi khách bấm "Tôi đã chuyển khoản"
+    path('payment-confirm/<int:booking_id>/', views.my_bookings, name='payment_confirm'),
     
     # --- 3. QUẢN LÝ DÀNH CHO ADMIN ---
     # Trang thống kê biểu đồ Tiếng Việt
@@ -35,6 +37,10 @@ urlpatterns = [
 ]
 
 # --- 6. CẤU HÌNH HÌNH ẢNH & CSS ---
-# Cấu hình này giúp ảnh phòng hiện lên chính xác trên môi trường Deploy
+# Cấu hình này rất quan trọng để ảnh phòng hiện lên trên Render
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+# Bản dùng cho môi trường Deploy thực tế
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

@@ -7,7 +7,8 @@
                 <div class="card-body text-center">
                     <h3 class="fw-bold mb-4">Thanh toán đặt phòng</h3>
                     <p class="mb-1 text-muted">Mã đơn hàng: <strong>#{{ booking.id }}</strong></p>
-                    <h4 class="text-danger fw-bold">{{ booking.total_price }} VNĐ</h4>
+                    
+                    <h4 class="text-danger fw-bold">{{ total_price|floatformat:0 }} VNĐ</h4>
                     
                     <hr>
                     
@@ -20,12 +21,9 @@
                         <strong>Lưu ý:</strong> Nội dung chuyển khoản phải là <b>{{ description }}</b> để hệ thống tự động nhận diện hóa đơn của bạn.
                     </div>
 
-                    <form action="{% url 'payment_confirm' booking.id %}" method="POST">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-primary btn-lg w-100 shadow-sm">
-                            <i class="fas fa-check-circle me-2"></i>Tôi đã chuyển khoản thành công
-                        </button>
-                    </form>
+                    <a href="{% url 'my_bookings' %}" class="btn btn-primary btn-lg w-100 shadow-sm">
+                        <i class="fas fa-check-circle me-2"></i>Tôi đã chuyển khoản thành công
+                    </a>
                     
                     <a href="{% url 'my_bookings' %}" class="btn btn-link mt-3 text-decoration-none text-muted">Thanh toán sau</a>
                 </div>
