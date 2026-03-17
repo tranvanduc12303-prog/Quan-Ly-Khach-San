@@ -5,42 +5,47 @@ from django.conf.urls.static import static
 from . import views
 
 urlpatterns = [
-    # --- 1. TRANG CHỦ & CHI TIẾT ---
-    # Hiển thị danh sách phòng và tìm kiếm
+    # --- 1. TRANG CHỦ, TÌM KIẾM & CHI TIẾT ---
+    # Hiển thị danh sách phòng và thanh tìm kiếm
     path('', views.home, name='home'),
-    # Xem chi tiết phòng, đặt phòng và gửi đánh giá
+    # Xem chi tiết phòng, thực hiện đặt phòng và gửi đánh giá (Reviews)
     path('room/<int:pk>/', views.room_detail, name='room_detail'),
     
-    # --- 2. QUẢN LÝ DÀNH CHO KHÁCH HÀNG ---
-    # Xem lịch sử đơn hàng của cá nhân
+    # --- 2. QUẢN LÝ DÀNH CHO KHÁCH HÀNG (MY BOOKINGS) ---
+    # Xem danh sách "Chỗ nghỉ của tôi"
     path('my-bookings/', views.my_bookings, name='my_bookings'),
-    # Trang hiển thị mã QR thanh toán VietQR (Sửa lỗi 500)
+    # Xử lý hủy đơn đặt phòng khi đang chờ duyệt
+    path('cancel-booking/<int:pk>/', views.cancel_booking, name='cancel_booking'),
+    # Trang hiển thị mã QR thanh toán VietQR cho từng đơn hàng
     path('payment/<int:booking_id>/', views.payment_page, name='payment_page'),
-    # (Bổ sung) Đường dẫn để xử lý khi khách bấm "Tôi đã chuyển khoản"
+    # Xác nhận sau khi khách bấm "Tôi đã chuyển khoản" (Dẫn về danh sách đơn)
     path('payment-confirm/<int:booking_id>/', views.my_bookings, name='payment_confirm'),
     
-    # --- 3. QUẢN LÝ DÀNH CHO ADMIN ---
-    # Trang thống kê biểu đồ Tiếng Việt
+    # --- 3. QUẢN LÝ DÀNH CHO ADMIN (DASHBOARD) ---
+    # Trang thống kê biểu đồ, doanh thu và quản lý tập trung
     path('dashboard/', views.admin_dashboard, name='admin_dashboard'),
-    # Duyệt (approve) hoặc Từ chối (reject) đơn đặt phòng
+    # Duyệt (approve) hoặc Từ chối (reject) đơn đặt phòng của khách
     path('manage-booking/<int:pk>/<str:action>/', views.manage_booking, name='manage_booking'),
     
-    # --- 4. HỆ THỐNG TÀI KHOẢN (AUTH) ---
+    # --- 4. HỆ THỐNG TÀI KHOẢN (AUTHENTICATION) ---
+    # Đăng nhập với template tùy chỉnh
     path('login/', auth_views.LoginView.as_view(template_name='core/login.html'), name='login'),
+    # Đăng xuất và quay về trang chủ
     path('logout/', auth_views.LogoutView.as_view(next_page='home'), name='logout'),
     
-    # --- 5. TRỢ LÝ AI & HỆ THỐNG ---
-    # Chatbot tư vấn phòng trống
+    # --- 5. TRỢ LÝ AI & CÔNG CỤ HỆ THỐNG ---
+    # Chatbot hỗ trợ tư vấn phòng sử dụng Groq API
     path('ai-assistant/', views.ai_assistant, name='ai_assistant'),
-    # Lệnh khởi tạo database nhanh trên Render
+    # Lệnh khởi tạo Database, tạo Superuser nhanh khi Deploy lên Render
     path('setup-database/', views.setup_database, name='setup_db'),
 ]
 
-# --- 6. CẤU HÌNH HÌNH ẢNH & CSS ---
-# Cấu hình này rất quan trọng để ảnh phòng hiện lên trên Render
+# --- 6. CẤU HÌNH MEDIA & STATIC (PHỤC VỤ HIỂN THỊ ẢNH) ---
+# Đảm bảo hình ảnh phòng khách sạn hiện lên chính xác trên môi trường Local và Deploy
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-# Bản dùng cho môi trường Deploy thực tế
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+else:
+    # Cấu hình dự phòng cho môi trường Production (Render)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
