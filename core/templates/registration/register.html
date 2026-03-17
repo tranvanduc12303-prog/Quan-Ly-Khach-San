@@ -1,0 +1,70 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="container d-flex align-items-center justify-content-center" style="min-height: 80vh; margin-top: 50px; margin-bottom: 50px;">
+    <div class="card shadow-lg p-4 border-0" style="background-color: #1e1e1e; border-radius: 25px; width: 100%; max-width: 420px; border: 1px solid #333 !important;">
+        
+        <div class="text-center mb-4">
+            <div class="display-5 text-warning mb-2"><i class="bi bi-person-plus-fill"></i></div>
+            <h2 class="fw-bold text-white">Đăng Ký</h2>
+            <p class="text-white-50 small">Trở thành thành viên của <span class="text-warning">MyHotel</span></p>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+                <div class="alert alert-danger border-0 small py-2 mb-3" style="border-radius: 12px; background-color: rgba(220, 53, 69, 0.15); color: #ff858d;">
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                            <div><i class="bi bi-exclamation-circle me-2"></i> {{ error }}</div>
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% for field in form %}
+            <div class="mb-3">
+                <label class="text-white-50 small mb-2 ms-2">{{ field.label }}</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-dark border-secondary text-warning" style="border-radius: 12px 0 0 12px;">
+                        {% if 'user' in field.name %}<i class="bi bi-person"></i>
+                        {% elif 'pass' in field.name %}<i class="bi bi-lock"></i>
+                        {% else %}<i class="bi bi-envelope"></i>{% endif %}
+                    </span>
+                    <input type="{{ field.field.widget.input_type|default:'text' }}" 
+                           name="{{ field.name }}" 
+                           class="form-control bg-dark text-white border-secondary py-2" 
+                           placeholder="{{ field.label }}..." 
+                           required 
+                           style="border-radius: 0 12px 12px 0;">
+                </div>
+                {% if field.help_text %}
+                <div class="form-text text-muted" style="font-size: 0.7rem;">{{ field.help_text|safe }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <button type="submit" class="btn btn-yellow w-100 fw-bold py-2 shadow-sm mb-3">
+                TẠO TÀI KHOẢN
+            </button>
+
+            <div class="text-center mt-3">
+                <p class="text-white-50 small">Đã có tài khoản? 
+                    <a href="{% url 'login' %}" class="text-warning text-decoration-none fw-bold hover-underline">Đăng nhập ngay</a>
+                </p>
+                <hr class="border-secondary opacity-25">
+                <a href="{% url 'home' %}" class="text-muted small text-decoration-none"><i class="bi bi-house-door me-1"></i> Về trang chủ</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .btn-yellow { background-color: #ffc107; color: #000; border: none; border-radius: 12px; transition: all 0.3s ease; }
+    .btn-yellow:hover { background-color: #e6af06; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255, 193, 7, 0.3); }
+    .form-control:focus { background-color: #252525 !important; border-color: #ffc107 !important; color: white !important; box-shadow: none; }
+    .hover-underline:hover { text-decoration: underline !important; }
+    body { background-color: #0b0b0b !important; }
+</style>
+{% endblock %}

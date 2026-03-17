@@ -28,8 +28,10 @@ urlpatterns = [
     path('manage-booking/<int:pk>/<str:action>/', views.manage_booking, name='manage_booking'),
     
     # --- 4. HỆ THỐNG TÀI KHOẢN (AUTHENTICATION) ---
-    # Đăng nhập với template tùy chỉnh
-    path('login/', auth_views.LoginView.as_view(template_name='core/login.html'), name='login'),
+    # Đăng ký tài khoản mới (Cần thiết cho nút "Đăng ký ngay" ở trang Login)
+    path('register/', views.register, name='register'),
+    # Đăng nhập (Lưu ý: template nằm trong registration/ theo ảnh cấu trúc thư mục của bạn)
+    path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
     # Đăng xuất và quay về trang chủ
     path('logout/', auth_views.LogoutView.as_view(next_page='home'), name='logout'),
     
@@ -46,6 +48,6 @@ if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 else:
-    # Cấu hình dự phòng cho môi trường Production (Render)
+    # Cấu hình cho môi trường Production (Render)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

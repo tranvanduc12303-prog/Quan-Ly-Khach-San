@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import User
+from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.db.models import Q, Count, Sum
@@ -56,9 +57,9 @@ def payment_page(request, booking_id):
     ACCOUNT_NO = "0987654321" 
     ACCOUNT_NAME = "KHACH SAN MYHOTEL"
     
-    # Đảm bảo số tiền là số nguyên và tạo nội dung chuyển khoản duy nhất
+    # Đảm bảo số tiền là số nguyên để tránh lỗi 500 khi Render xử lý logic số
     try:
-        amount = int(booking.room.price)
+        amount = int(booking.room.price) if booking.room.price else 0
     except (ValueError, TypeError):
         amount = 0
         
@@ -213,10 +214,22 @@ def ai_assistant(request):
         return JsonResponse({'reply': "Rất tiếc, AI đang bận xử lý. Bạn vui lòng thử lại sau nhé!"})
 
 # --- 7. QUẢN LÝ TÀI KHOẢN & HỆ THỐNG ---
+def register(request):
+    """Xử lý đăng ký thành viên mới (Bổ sung để khớp với login.html)"""
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            messages.success(request, f'Tài khoản {user.username} đã được tạo thành công! Hãy đăng nhập.')
+            return redirect('login')
+    else:
+        form = UserCreationForm()
+    return render(request, 'registration/register.html', {'form': form})
+
 @login_required
 def my_bookings(request):
     """Trang 'Chỗ nghỉ của tôi' dành cho khách hàng kiểm tra lịch sử"""
-    # Lấy đơn hàng và thông tin phòng đi kèm để tối ưu tốc độ tải trang
+    # Lấy đơn hàng và thông tin phòng đi kèm để tối ưu tốc độ và tránh lỗi 500
     bookings = Booking.objects.filter(user=request.user).select_related('room').order_by('-id')
     return render(request, 'core/my_bookings.html', {'bookings': bookings})
 
@@ -236,10 +249,8 @@ def cancel_booking(request, pk):
 def setup_database(request):
     """Công cụ khởi tạo hệ thống nhanh (Migrate & Superuser) cho Render"""
     try:
-        # Chạy migrate để cập nhật cấu trúc bảng
         call_command('migrate')
         
-        # Tạo tài khoản quản trị mặc định nếu chưa có
         if not User.objects.filter(username='admin_moi').exists():
             User.objects.create_superuser('admin_moi', 'admin@hotel.com', 'admin12345')
             return HttpResponse("Khởi tạo hệ thống thành công! Admin: admin_moi / Pass: admin12345")
