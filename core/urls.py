@@ -9,9 +9,13 @@ urlpatterns = [
     path('', views.home, name='home'),
     path('room/<int:pk>/', views.room_detail, name='room_detail'),
     
-    # --- 2. QUẢN LÝ DÀNH CHO KHÁCH HÀNG ---
+    # --- 2. QUẢN LÝ DÀNH CHO KHÁCH HÀNG (Bao gồm Thanh toán) ---
     path('my-bookings/', views.my_bookings, name='my_bookings'),
     path('cancel-booking/<int:pk>/', views.cancel_booking, name='cancel_booking'),
+    
+    # Hai dòng mới để xử lý thanh toán QR
+    path('payment/<int:booking_id>/', views.payment_page, name='payment_page'),
+    path('payment-confirm/<int:booking_id>/', views.payment_confirm, name='payment_confirm'),
     
     # --- 3. QUẢN LÝ DÀNH CHO ADMIN ---
     path('dashboard/', views.admin_dashboard, name='admin_dashboard'),
@@ -23,10 +27,11 @@ urlpatterns = [
     
     # --- 5. TRỢ LÝ AI & HỆ THỐNG ---
     path('ai-assistant/', views.ai_assistant, name='ai_assistant'),
-    # Đổi tên cho khớp với hướng dẫn trước đó (setup-db -> setup-database)
     path('setup-database/', views.setup_database, name='setup_db'),
 ]
 
-# --- 6. CẤU HÌNH HIỂN THỊ HÌNH ẢNH (ÉP BUỘC HIỆN TRÊN RENDER) ---
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+# --- 6. CẤU HÌNH HIỂN THỊ HÌNH ẢNH ---
+# Dòng này cực kỳ quan trọng để ảnh hiện lên khi bạn chạy local và trên Render
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

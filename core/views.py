@@ -1,145 +1,138 @@
 import os
-from groq import Groq  # Thư viện AI mới
+from groq import Groq
 from datetime import datetime
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Sum
 from django.utils import timezone
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.core.management import call_command
 
-from .models import Room, Booking, Destination, Review
+from .models import Room, Booking, Destination, Review, RoomType, Service
 
-# --- CẤU HÌNH HỖ TRỢ ---
+# --- HỖ TRỢ PHÂN QUYỀN ---
 def is_admin(user):
     return user.is_authenticated and user.is_staff
 
-# --- 1. HỆ THỐNG AI (SỬ DỤNG GROQ) ---
+# --- 1. HỆ THỐNG AI TƯ VẤN (SỬ DỤNG GROQ LLAMA 3) ---
 def ai_assistant(request):
-    """
-    Xử lý Chatbot sử dụng Groq Llama 3 - Tốc độ cực nhanh và miễn phí.
-    """
     user_message = request.GET.get('message', '').strip()
-    
     if not user_message:
-        return JsonResponse({'reply': "Chào bạn! MyHotel có thể giúp gì cho bạn ạ?"}, json_dumps_params={'ensure_ascii': False})
+        return JsonResponse({'reply': "Chào bạn! MyHotel có thể giúp gì cho bạn?"})
 
-    # Lấy API Key từ Environment Variable trên Render
     api_key = os.environ.get('GROQ_API_KEY')
-    if not api_key:
-        return JsonResponse({'reply': "Hệ thống chưa cấu hình GROQ_API_KEY!"}, json_dumps_params={'ensure_ascii': False})
-
     try:
         client = Groq(api_key=api_key.strip())
-        
-        # Lấy danh sách phòng trống để AI tư vấn thông minh hơn
-        rooms = Room.objects.filter(is_available=True)[:3]
-        if rooms.exists():
-            room_list = [f"Phòng {r.room_number} tại {r.address} giá {r.price} VNĐ" for r in rooms]
-            context_rooms = "Các phòng còn trống: " + ", ".join(room_list)
-        else:
-            context_rooms = "Hiện tại khách sạn đã hết phòng trống."
+        available_rooms = Room.objects.filter(is_available=True).select_related('room_type')[:3]
+        room_info = [f"Phòng {r.room_number} ({r.room_type.name}) giá {int(r.price):,} VNĐ" for r in available_rooms]
+        context = "Thông tin phòng trống: " + ", ".join(room_info) if room_info else "Hiện tại hết phòng."
 
-        # Cấu hình Prompt
-        prompt = (
-            f"Bạn là 'Trợ lý ảo MyHotel'. {context_rooms}. "
-            f"Hãy trả lời bằng tiếng Việt, phong cách lịch sự, ngắn gọn (dưới 60 từ). "
-            f"Câu hỏi của khách: {user_message}"
+        prompt = f"Bạn là nhân viên khách sạn MyHotel. {context}. Trả lời bằng tiếng Việt, thân thiện, ngắn gọn. Khách hỏi: {user_message}"
+        
+        completion = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model="llama3-8b-8192",
+            temperature=0.7,
         )
-        
-        # Gọi API Groq
-        chat_completion = client.chat.completions.create(
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt,
-                }
-            ],
-            model="llama3-8b-8192", # Model mạnh và miễn phí
-        )
-        
-        response_text = chat_completion.choices[0].message.content
-        
-        return JsonResponse({'reply': response_text.strip()}, json_dumps_params={'ensure_ascii': False})
-        
-    except Exception as e:
-        print(f"--- AI ERROR: {str(e)} ---")
-        return JsonResponse({'reply': "AI đang bận một chút, bạn thử lại sau nhé!"}, json_dumps_params={'ensure_ascii': False})
+        return JsonResponse({'reply': completion.choices[0].message.content.strip()})
+    except:
+        return JsonResponse({'reply': "Chatbot đang bận, bạn gọi hotline nhé!"})
 
 # --- 2. TRANG CHỦ & TÌM KIẾM ---
 def home(request):
     query = request.GET.get('q', '').strip()
     destinations = Destination.objects.all()
-    rooms_list = Room.objects.all().order_by('-is_available', 'price')
+    rooms = Room.objects.select_related('room_type').all().order_by('-is_available', 'price')
     
     if query:
-        rooms = rooms_list.filter(
-            Q(room_number__icontains=query) |
+        rooms = rooms.filter(
+            Q(room_number__icontains=query) | 
             Q(address__icontains=query) |
-            Q(description__icontains=query)
+            Q(room_type__name__icontains=query)
         ).distinct()
-    else:
-        rooms = rooms_list
 
     return render(request, 'core/home.html', {
-        'rooms': rooms,
-        'destinations': destinations,
+        'rooms': rooms, 
+        'destinations': destinations, 
         'query': query
     })
 
-# --- 3. CHI TIẾT PHÒNG & ĐẶT PHÒNG ---
+# --- 3. CHI TIẾT PHÒNG & LOGIC ĐẶT PHÒNG ---
 def room_detail(request, pk):
     room = get_object_or_404(Room, pk=pk)
-    reviews = room.reviews.all().order_by('-created_at')
+    reviews = room.reviews.select_related('user').order_by('-created_at')
+    services = Service.objects.all()
 
+    if request.method == 'POST' and 'book_room' in request.POST:
+        if not request.user.is_authenticated:
+            messages.warning(request, "Vui lòng đăng nhập để đặt phòng.")
+            return redirect('login')
+        
+        try:
+            check_in = datetime.strptime(request.POST.get('check_in'), '%Y-%m-%d').date()
+            check_out = datetime.strptime(request.POST.get('check_out'), '%Y-%m-%d').date()
+
+            if check_out <= check_in:
+                messages.error(request, "Ngày trả phòng phải sau ngày nhận.")
+            elif not room.is_available:
+                messages.error(request, "Phòng này vừa được đặt.")
+            else:
+                booking = Booking.objects.create(
+                    user=request.user, room=room, 
+                    check_in=check_in, check_out=check_out, status='pending'
+                )
+                selected_services = request.POST.getlist('services')
+                if selected_services:
+                    booking.services.set(selected_services)
+                    booking.save()
+
+                messages.success(request, "Đã tạo đơn đặt phòng thành công!")
+                # CHUYỂN HƯỚNG SANG TRANG THANH TOÁN
+                return redirect('payment_page', booking_id=booking.id)
+        except:
+            messages.error(request, "Lỗi định dạng ngày tháng.")
+
+    return render(request, 'core/room_detail.html', {'room': room, 'reviews': reviews, 'services': services})
+
+# --- 4. THANH TOÁN (VIETQR) ---
+@login_required
+def payment_page(request, booking_id):
+    booking = get_object_or_404(Booking, id=booking_id, user=request.user)
+    
+    # Thông tin ngân hàng của bạn (Demo)
+    BANK_ID = "MB"
+    ACCOUNT_NO = "0987654321" # Thay bằng số của bạn
+    ACCOUNT_NAME = "KHACH SAN MYHOTEL"
+    
+    amount = booking.total_price
+    description = f"MYHOTEL{booking.id}"
+    
+    # Tạo mã QR VietQR tự động điền số tiền và nội dung
+    qr_url = f"https://img.vietqr.io/image/{BANK_ID}-{ACCOUNT_NO}-compact2.png?amount={amount}&addInfo={description}&accountName={ACCOUNT_NAME}"
+    
+    return render(request, 'core/payment.html', {
+        'booking': booking,
+        'qr_url': qr_url,
+        'description': description
+    })
+
+@login_required
+def payment_confirm(request, booking_id):
+    booking = get_object_or_404(Booking, id=booking_id, user=request.user)
     if request.method == 'POST':
-        if 'book_room' in request.POST:
-            if not request.user.is_authenticated:
-                messages.warning(request, "Vui lòng đăng nhập để đặt phòng.")
-                return redirect('login')
+        booking.is_paid = True
+        booking.payment_method = 'transfer'
+        booking.save()
+        messages.success(request, "Hệ thống đã ghi nhận thanh toán. Vui lòng chờ xác nhận từ lễ tân!")
+    return redirect('my_bookings')
 
-            check_in_str = request.POST.get('check_in')
-            check_out_str = request.POST.get('check_out')
-
-            try:
-                check_in = datetime.strptime(check_in_str, '%Y-%m-%d').date()
-                check_out = datetime.strptime(check_out_str, '%Y-%m-%d').date()
-
-                if check_out <= check_in:
-                    messages.error(request, "Ngày trả phải sau ngày nhận.")
-                elif check_in < timezone.now().date():
-                    messages.error(request, "Không thể đặt ngày quá khứ.")
-                elif not room.is_available:
-                    messages.error(request, "Phòng này vừa có người đặt.")
-                else:
-                    Booking.objects.create(
-                        user=request.user, room=room,
-                        check_in=check_in, check_out=check_out, status='pending'
-                    )
-                    messages.success(request, f"Đã gửi yêu cầu đặt phòng {room.room_number}!")
-                    return redirect('my_bookings')
-            except (ValueError, TypeError):
-                messages.error(request, "Ngày tháng không hợp lệ.")
-
-        elif 'submit_review' in request.POST:
-            if not request.user.is_authenticated:
-                return redirect('login')
-            rating = request.POST.get('rating')
-            comment = request.POST.get('comment')
-            if rating and comment:
-                Review.objects.create(room=room, user=request.user, rating=int(rating), comment=comment)
-                messages.success(request, "Cảm ơn bạn đã đánh giá!")
-                return redirect('room_detail', pk=pk)
-
-    return render(request, 'core/room_detail.html', {'room': room, 'reviews': reviews})
-
-# --- 4. QUẢN LÝ CHO KHÁCH HÀNG ---
+# --- 5. TÀI KHOẢN KHÁCH HÀNG ---
 @login_required
 def my_bookings(request):
-    bookings = Booking.objects.filter(user=request.user).order_by('-created_at')
+    bookings = Booking.objects.filter(user=request.user).select_related('room').prefetch_related('services').order_by('-created_at')
     return render(request, 'core/my_bookings.html', {'bookings': bookings})
 
 @login_required
@@ -147,22 +140,25 @@ def cancel_booking(request, pk):
     booking = get_object_or_404(Booking, pk=pk, user=request.user)
     if booking.status == 'pending':
         booking.delete()
-        messages.success(request, "Đã hủy yêu cầu.")
+        messages.success(request, "Đã hủy đơn thành công.")
     else:
-        messages.error(request, "Đơn đã xử lý, không thể hủy.")
+        messages.error(request, "Không thể hủy đơn đã được xử lý.")
     return redirect('my_bookings')
 
-# --- 5. HỆ THỐNG QUẢN TRỊ ---
+# --- 6. QUẢN TRỊ (ADMIN DASHBOARD) ---
 @user_passes_test(is_admin)
 def admin_dashboard(request):
-    booking_stats = Booking.objects.values('status').annotate(total=Count('id'))
-    room_stats = Room.objects.all().count()
-    pending_bookings = Booking.objects.filter(status='pending').order_by('-created_at')
-
+    # Tính doanh thu từ các đơn đã duyệt
+    total_revenue = Booking.objects.filter(status='approved').aggregate(Sum('room__price'))['room__price__sum'] or 0
+    pending_bookings = Booking.objects.filter(status='pending').select_related('user', 'room')
+    status_stats = Booking.objects.values('status').annotate(total=Count('id'))
+    
     context = {
-        'booking_labels': [item['status'].capitalize() for item in booking_stats],
-        'booking_data': [item['total'] for item in booking_stats],
-        'pending_bookings': pending_bookings
+        'total_revenue': total_revenue,
+        'pending_count': pending_bookings.count(),
+        'room_count': Room.objects.count(),
+        'pending_bookings': pending_bookings,
+        'booking_stats': {item['status']: item['total'] for item in status_stats}
     }
     return render(request, 'core/dashboard.html', context)
 
@@ -173,23 +169,20 @@ def manage_booking(request, pk, action):
         booking.status = 'approved'
         booking.room.is_available = False
         booking.room.save()
-        messages.success(request, f"Đã duyệt phòng {booking.room.room_number}.")
     elif action == 'reject':
         booking.status = 'rejected'
         booking.room.is_available = True
         booking.room.save()
-        messages.warning(request, f"Đã từ chối đơn của {booking.user.username}.")
-    
     booking.save()
     return redirect('admin_dashboard')
 
-# --- 6. KHỞI TẠO CƠ SỞ DỮ LIỆU ---
+# --- 7. KHỞI TẠO HỆ THỐNG ---
 def setup_database(request):
     try:
         call_command('migrate')
-        if not User.objects.filter(username='admin_nhom13').exists():
-            User.objects.create_superuser('admin_nhom13', 'admin@hotel.com', 'nhom13_hotel')
+        if not User.objects.filter(is_superuser=True).exists():
+            User.objects.create_superuser('admin_moi', 'admin@hotel.com', 'admin12345')
             return HttpResponse("Khởi tạo Admin thành công!")
-        return HttpResponse("Đã đồng bộ dữ liệu PostgreSQL.")
+        return HttpResponse("Hệ thống đã sẵn sàng.")
     except Exception as e:
-        return HttpResponse(f"Lỗi: {str(e)}")
+        return HttpResponse(f"Lỗi: {e}")
