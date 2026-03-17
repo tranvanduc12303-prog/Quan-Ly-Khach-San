@@ -26,7 +26,11 @@
             <div class="card h-100 border-0 p-4 shadow-lg" style="background-color: #1e1e1e; border-radius: 20px;">
                 <div class="d-flex justify-content-between align-items-start mb-3">
                     <h1 class="fw-bold mb-0" style="color: #4dabff;">Phòng {{ room.room_number }}</h1>
-                    <span class="badge bg-success">Còn trống</span>
+                    {% if room.is_available %}
+                        <span class="badge bg-success">Còn trống</span>
+                    {% else %}
+                        <span class="badge bg-danger">Đã đặt</span>
+                    {% endif %}
                 </div>
                 
                 <div class="mb-4">
@@ -34,32 +38,60 @@
                 </div>
 
                 <div class="border-bottom border-secondary pb-3 mb-4">
-                    <h3 class="text-warning fw-bold mb-0">{{ room.price|floatformat:0 }} VND <small class="text-muted fs-6 fw-normal">/ đêm</small></h3>
+                    <h3 class="text-warning fw-bold mb-0">
+                        <span id="roomPrice">{{ room.price|floatformat:0 }}</span> VND 
+                        <small class="text-muted fs-6 fw-normal">/ đêm</small>
+                    </h3>
                 </div>
 
                 <div class="mb-4">
-                    <h6 class="text-white-50 fw-bold mb-2">TIỆN NGHI:</h6>
+                    <h6 class="text-white-50 fw-bold mb-2 text-uppercase" style="font-size: 0.8rem; letter-spacing: 1px;">Tiện nghi:</h6>
                     <div class="p-3 rounded bg-dark border border-secondary">
                         <p class="mb-0 small text-light opacity-75">
-                            <i class="bi bi-wifi me-2"></i> Wifi miễn phí, Máy lạnh, Tivi truyền hình cáp, Ban công thoáng mát, Minibar.
+                            <i class="bi bi-check2-circle text-warning me-2"></i> Wifi miễn phí, Máy lạnh, Tivi, Ban công, Minibar.
                         </p>
                     </div>
                 </div>
 
-                <form method="POST" class="mt-auto">
+                <form method="POST" class="mt-auto" id="bookingForm">
                     {% csrf_token %}
-                    <div class="row g-3">
+                    <div class="row g-3 mb-4">
                         <div class="col-md-6">
                             <label class="form-label small text-white-50">Ngày nhận phòng</label>
-                            <input type="date" name="check_in" class="form-control bg-dark text-white border-secondary" required>
+                            <input type="date" name="check_in" id="checkIn" class="form-control bg-dark text-white border-secondary" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small text-white-50">Ngày trả phòng</label>
-                            <input type="date" name="check_out" class="form-control bg-dark text-white border-secondary" required>
+                            <input type="date" name="check_out" id="checkOut" class="form-control bg-dark text-white border-secondary" required>
                         </div>
                     </div>
 
-                    <button type="submit" name="book_room" class="btn btn-warning w-100 fw-bold py-3 mt-4 shadow-sm text-uppercase">
+                    <div class="mb-4">
+                        <h6 class="text-white-50 fw-bold mb-3 text-uppercase" style="font-size: 0.8rem; letter-spacing: 1px;">Dịch vụ thêm:</h6>
+                        <div class="row g-2">
+                            {% for service in services %}
+                            <div class="col-6">
+                                <div class="form-check p-2 rounded border border-secondary bg-dark-subtle">
+                                    <input class="form-check-input ms-0 me-2 service-checkbox" type="checkbox" name="services" 
+                                           value="{{ service.id }}" id="service{{ service.id }}" data-price="{{ service.price }}">
+                                    <label class="form-check-label text-light small" for="service{{ service.id }}">
+                                        {{ service.name }} <br>
+                                        <span class="text-warning">+{{ service.price|floatformat:0 }}đ</span>
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="p-3 mb-4 rounded-3" style="background: rgba(77, 171, 255, 0.1); border: 1px dashed #4dabff;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-white-50">Tổng thanh toán:</span>
+                            <span class="h4 mb-0 fw-bold text-info" id="totalDisplay">{{ room.price|floatformat:0 }} VND</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" name="book_room" class="btn btn-warning w-100 fw-bold py-3 shadow-sm text-uppercase">
                         Xác nhận đặt phòng ngay
                     </button>
                 </form>
@@ -72,8 +104,7 @@
             <h4 class="text-warning mb-4 fw-bold">
                 <i class="bi bi-chat-right-dots me-2"></i>Đánh giá từ khách hàng ({{ reviews.count }})
             </h4>
-            
-            <div class="pe-lg-4" style="max-height: 600px; overflow-y: auto;">
+            <div class="pe-lg-4" style="max-height: 500px; overflow-y: auto;">
                 {% for review in reviews %}
                 <div class="card bg-dark border-secondary p-3 mb-3 shadow-sm" style="border-radius: 15px;">
                     <div class="d-flex justify-content-between align-items-center mb-2">
@@ -85,33 +116,25 @@
                         </div>
                         <div class="text-warning small">
                             {% for i in "12345" %}
-                                {% if forloop.counter <= review.rating %}
-                                    <i class="bi bi-star-fill"></i>
-                                {% else %}
-                                    <i class="bi bi-star text-secondary"></i>
-                                {% endif %}
+                                <i class="bi bi-star{% if forloop.counter <= review.rating %}-fill{% endif %}"></i>
                             {% endfor %}
                         </div>
                     </div>
-                    <small class="text-muted d-block mb-2 fst-italic">{{ review.created_at|date:"d/m/Y H:i" }}</small>
-                    <p class="text-light opacity-75 mb-0" style="font-size: 0.95rem;">"{{ review.comment }}"</p>
+                    <p class="text-light opacity-75 mb-0 small">"{{ review.comment }}"</p>
                 </div>
                 {% empty %}
-                <div class="text-center py-5 bg-dark rounded-4 border border-secondary border-dashed">
-                    <p class="text-muted mb-0">Chưa có đánh giá nào. Hãy là người đầu tiên trải nghiệm và chia sẻ!</p>
-                </div>
+                <p class="text-muted">Chưa có đánh giá nào.</p>
                 {% endfor %}
             </div>
         </div>
 
         <div class="col-lg-5">
-            <div class="card p-4 shadow-lg border-0" style="background-color: #1e1e1e; border-radius: 20px; border: 1px solid #333 !important;">
+            <div class="card p-4 shadow-lg border-0 bg-dark" style="border-radius: 20px; border: 1px solid #333 !important;">
                 <h5 class="text-warning mb-3 fw-bold">Viết nhận xét của bạn</h5>
                 <form method="POST">
                     {% csrf_token %}
                     <div class="mb-3">
-                        <label class="form-label small text-white-50">Bạn chấm mấy sao?</label>
-                        <select name="rating" class="form-select bg-dark text-white border-secondary shadow-none">
+                        <select name="rating" class="form-select bg-dark text-white border-secondary">
                             <option value="5">⭐⭐⭐⭐⭐ Tuyệt vời</option>
                             <option value="4">⭐⭐⭐⭐ Tốt</option>
                             <option value="3">⭐⭐⭐ Bình thường</option>
@@ -120,17 +143,12 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small text-white-50">Chia sẻ cảm nghĩ</label>
-                        <textarea name="comment" class="form-control bg-dark text-white border-secondary shadow-none" rows="4" placeholder="Phòng sạch sẽ, phục vụ chu đáo..." required></textarea>
+                        <textarea name="comment" class="form-control bg-dark text-white border-secondary" rows="3" placeholder="Chia sẻ cảm nghĩ của bạn..." required></textarea>
                     </div>
                     {% if user.is_authenticated %}
-                        <button type="submit" name="submit_review" class="btn btn-outline-warning w-100 fw-bold py-2 mt-2">
-                            GỬI ĐÁNH GIÁ
-                        </button>
+                        <button type="submit" name="submit_review" class="btn btn-outline-warning w-100 fw-bold">GỬI ĐÁNH GIÁ</button>
                     {% else %}
-                        <a href="{% url 'login' %}" class="btn btn-outline-secondary w-100 fw-bold py-2 mt-2 disabled">
-                            ĐĂNG NHẬP ĐỂ ĐÁNH GIÁ
-                        </a>
+                        <button class="btn btn-outline-secondary w-100 disabled">ĐĂNG NHẬP ĐỂ ĐÁNH GIÁ</button>
                     {% endif %}
                 </form>
             </div>
@@ -138,21 +156,44 @@
     </div>
 </div>
 
+<script>
+    const checkInInput = document.getElementById('checkIn');
+    const checkOutInput = document.getElementById('checkOut');
+    const serviceCheckboxes = document.querySelectorAll('.service-checkbox');
+    const totalDisplay = document.getElementById('totalDisplay');
+    const basePrice = parseFloat("{{ room.price }}");
+
+    function calculateTotal() {
+        let total = basePrice;
+        
+        // 1. Tính theo số đêm
+        if (checkInInput.value && checkOutInput.value) {
+            const start = new Date(checkInInput.value);
+            const end = new Date(checkOutInput.value);
+            const nights = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+            if (nights > 0) {
+                total = basePrice * nights;
+            }
+        }
+
+        // 2. Cộng tiền dịch vụ
+        serviceCheckboxes.forEach(cb => {
+            if (cb.checked) {
+                total += parseFloat(cb.dataset.price);
+            }
+        });
+
+        totalDisplay.innerText = total.toLocaleString('vi-VN') + " VND";
+    }
+
+    checkInInput.addEventListener('change', calculateTotal);
+    checkOutInput.addEventListener('change', calculateTotal);
+    serviceCheckboxes.forEach(cb => cb.addEventListener('change', calculateTotal));
+</script>
+
 <style>
-    /* Custom CSS cho giao diện */
-    input[type="date"]::-webkit-calendar-picker-indicator {
-        filter: invert(1);
-    }
-    .border-dashed {
-        border-style: dashed !important;
-    }
-    /* Thanh cuộn cho danh sách review */
-    .pe-lg-4::-webkit-scrollbar {
-        width: 5px;
-    }
-    .pe-lg-4::-webkit-scrollbar-thumb {
-        background: #444;
-        border-radius: 10px;
-    }
+    input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+    .bg-dark-subtle { background-color: #252525 !important; }
+    .form-check-input:checked { background-color: #ffc107; border-color: #ffc107; }
 </style>
 {% endblock %}
