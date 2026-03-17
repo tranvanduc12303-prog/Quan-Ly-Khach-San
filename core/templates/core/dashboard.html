@@ -1,60 +1,85 @@
 {% extends 'core/base.html' %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2 class="mb-4 text-center">Hệ Thống Quản Trị MyHotel</h2>
+<div class="container mt-5 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold text-warning mb-0">Hệ Thống Quản Trị MyHotel</h2>
+        <span class="badge bg-dark border border-secondary p-2">
+            <i class="bi bi-calendar3 me-2"></i>{% now "d/m/Y" %}
+        </span>
+    </div>
     
-    <div class="row mb-5">
-        <div class="col-md-6">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">Thống kê đơn đặt phòng</div>
-                <div class="card-body">
+    <div class="row g-4 mb-5">
+        <div class="col-lg-6">
+            <div class="card h-100 shadow-lg border-0 bg-dark" style="border-radius: 15px; border: 1px solid #333 !important;">
+                <div class="card-header bg-transparent border-secondary py-3">
+                    <h5 class="card-title text-info mb-0 fw-bold">
+                        <i class="bi bi-pie-chart-fill me-2"></i>Trạng thái đơn hàng
+                    </h5>
+                </div>
+                <div class="card-body d-flex align-items-center justify-content-center" style="min-height: 300px;">
                     <canvas id="bookingChart"></canvas>
                 </div>
             </div>
         </div>
         
-        <div class="col-md-6">
-            <div class="card shadow">
-                <div class="card-header bg-success text-white">Phân bố phòng theo khu vực</div>
-                <div class="card-body">
+        <div class="col-lg-6">
+            <div class="card h-100 shadow-lg border-0 bg-dark" style="border-radius: 15px; border: 1px solid #333 !important;">
+                <div class="card-header bg-transparent border-secondary py-3">
+                    <h5 class="card-title text-success mb-0 fw-bold">
+                        <i class="bi bi-geo-alt-fill me-2"></i>Phân bổ phòng theo khu vực
+                    </h5>
+                </div>
+                <div class="card-body" style="min-height: 300px;">
                     <canvas id="roomChart"></canvas>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card shadow mb-4">
-        <div class="card-header bg-warning text-dark font-weight-bold">
-            Đơn đặt phòng chờ duyệt
+    <div class="card shadow-lg border-0 bg-dark mb-4" style="border-radius: 15px; border: 1px solid #333 !important;">
+        <div class="card-header bg-warning py-3" style="border-radius: 15px 15px 0 0;">
+            <h5 class="mb-0 text-dark fw-bold">
+                <i class="bi bi-clock-history me-2"></i>Đơn đặt phòng chờ duyệt
+            </h5>
         </div>
-        <div class="card-body">
+        <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead class="thead-light">
+                <table class="table table-dark table-hover mb-0 align-middle">
+                    <thead class="table-black text-white-50">
                         <tr>
-                            <th>Khách hàng</th>
+                            <th class="ps-4">Khách hàng</th>
                             <th>Phòng</th>
                             <th>Ngày nhận</th>
                             <th>Ngày trả</th>
-                            <th>Thao tác</th>
+                            <th class="text-center">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for booking in pending_bookings %}
                         <tr>
-                            <td>{{ booking.user.username }}</td>
-                            <td>{{ booking.room.room_number }}</td>
-                            <td>{{ booking.check_in }}</td>
-                            <td>{{ booking.check_out }}</td>
-                            <td>
-                                <a href="{% url 'manage_booking' booking.pk 'approve' %}" class="btn btn-sm btn-success">Duyệt</a>
-                                <a href="{% url 'manage_booking' booking.pk 'reject' %}" class="btn btn-sm btn-danger">Từ chối</a>
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-primary rounded-circle me-2 d-flex align-items-center justify-content-center text-white fw-bold" style="width: 30px; height: 30px; font-size: 0.8rem;">
+                                        {{ booking.user.username|slice:":1"|upper }}
+                                    </div>
+                                    {{ booking.user.username }}
+                                </div>
+                            </td>
+                            <td><span class="badge bg-secondary">Phòng {{ booking.room.room_number }}</span></td>
+                            <td>{{ booking.check_in|date:"d/m/Y" }}</td>
+                            <td>{{ booking.check_out|date:"d/m/Y" }}</td>
+                            <td class="text-center">
+                                <a href="{% url 'manage_booking' booking.pk 'approve' %}" class="btn btn-sm btn-success px-3 me-2">Duyệt</a>
+                                <a href="{% url 'manage_booking' booking.pk 'reject' %}" class="btn btn-sm btn-outline-danger px-3">Từ chối</a>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="5" class="text-center text-muted">Không có đơn hàng nào cần xử lý.</td>
+                            <td colspan="5" class="text-center py-5 text-muted fst-italic">
+                                <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                Không có đơn hàng nào cần xử lý.
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -66,19 +91,32 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Biểu đồ đặt phòng
+    // Cấu hình chung cho màu chữ trong biểu đồ (Trắng)
+    Chart.defaults.color = 'rgba(255, 255, 255, 0.7)';
+    Chart.defaults.font.family = "'Segoe UI', sans-serif";
+
+    // Biểu đồ đặt phòng (Dạng Tròn)
     new Chart(document.getElementById('bookingChart'), {
-        type: 'pie',
+        type: 'doughnut', // Chuyển sang Doughnut cho hiện đại
         data: {
             labels: {{ booking_labels|safe }},
             datasets: [{
                 data: {{ booking_data|safe }},
-                backgroundColor: ['#f39c12', '#2ecc71', '#e74c3c']
+                backgroundColor: ['#f39c12', '#2ecc71', '#e74c3c'],
+                borderWidth: 0,
+                hoverOffset: 10
             }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' }
+            },
+            cutout: '70%'
         }
     });
 
-    // Biểu đồ phòng
+    // Biểu đồ phòng (Dạng Cột)
     new Chart(document.getElementById('roomChart'), {
         type: 'bar',
         data: {
@@ -86,9 +124,34 @@
             datasets: [{
                 label: 'Số lượng phòng',
                 data: {{ room_data|safe }},
-                backgroundColor: '#3498db'
+                backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                borderColor: '#3498db',
+                borderWidth: 1,
+                borderRadius: 5
             }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                },
+                x: {
+                    grid: { display: false }
+                }
+            },
+            plugins: {
+                legend: { display: false }
+            }
         }
     });
 </script>
+
+<style>
+    .table-dark { background-color: #1e1e1e; }
+    .table-hover tbody tr:hover { background-color: rgba(255, 255, 255, 0.05); }
+    .card { transition: transform 0.3s ease; }
+    .card:hover { transform: translateY(-5px); }
+</style>
 {% endblock %}
