@@ -12,9 +12,15 @@ urlpatterns = [
     # Xem chi tiết phòng, thực hiện đặt phòng và gửi đánh giá (Reviews)
     path('room/<int:pk>/', views.room_detail, name='room_detail'),
     
-    # --- 2. QUẢN LÝ DÀNH CHO KHÁCH HÀNG (MY BOOKINGS) ---
+    # --- 2. QUẢN LÝ DÀNH CHO KHÁCH HÀNG (MY BOOKINGS & PROFILE) ---
     # Xem danh sách "Chỗ nghỉ của tôi"
     path('my-bookings/', views.my_bookings, name='my_bookings'),
+    
+    # Trang thông tin cá nhân (Profile) hiển thị thống kê và thông tin Đức/Khách hàng
+    path('profile/', views.profile, name='profile'),
+    
+    # Trang chỉnh sửa thông tin cá nhân (Họ tên, Email)
+    path('profile/edit/', views.edit_profile, name='edit_profile'),
     
     # Xử lý hủy đơn đặt phòng khi đang chờ duyệt
     path('cancel-booking/<int:pk>/', views.cancel_booking, name='cancel_booking'),

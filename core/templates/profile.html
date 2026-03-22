@@ -1,0 +1,98 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm border-0" style="border-radius: 15px;">
+                <div class="card-body text-center p-5">
+                    <div class="mb-3">
+                        <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=0D6EFD&color=fff&size=128" 
+                             class="rounded-circle shadow" alt="Avatar">
+                    </div>
+                    <h3 class="fw-bold">{{ user.username }}</h3>
+                    <p class="text-muted">{{ user.email|default:"Chưa cập nhật email" }}</p>
+                    <hr>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'edit_profile' %}" class="btn btn-primary">
+                            <i class="fas fa-user-edit"></i> Chỉnh sửa hồ sơ
+                        </a>
+                        <a href="{% url 'logout' %}" class="btn btn-outline-danger">Đăng xuất</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card bg-primary text-white text-center p-3 shadow-sm border-0">
+                        <h5>{{ stats.total }}</h5>
+                        <small>Tổng đơn đặt</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-success text-white text-center p-3 shadow-sm border-0">
+                        <h5>{{ stats.approved }}</h5>
+                        <small>Đã xác nhận</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-warning text-dark text-center p-3 shadow-sm border-0">
+                        <h5>{{ stats.pending }}</h5>
+                        <small>Đang chờ duyệt</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0" style="border-radius: 15px;">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold text-primary">Lịch sử đặt phòng gần đây</h5>
+                </div>
+                <div class="card-body">
+                    {% if bookings %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Phòng</th>
+                                        <th>Ngày nhận</th>
+                                        <th>Trạng thái</th>
+                                        <th>Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for b in bookings %}
+                                    <tr>
+                                        <td><strong>#{{ b.room.room_number }}</strong></td>
+                                        <td>{{ b.check_in|date:"d/m/Y" }}</td>
+                                        <td>
+                                            {% if b.status == 'approved' %}
+                                                <span class="badge bg-success">Thành công</span>
+                                            {% elif b.status == 'pending' %}
+                                                <span class="badge bg-warning text-dark">Chờ duyệt</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Đã hủy/Từ chối</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'room_detail' b.room.id %}" class="btn btn-sm btn-outline-secondary">Xem lại</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <p class="text-muted">Bạn chưa có đơn đặt phòng nào.</p>
+                            <a href="{% url 'home' %}" class="btn btn-primary btn-sm">Đặt phòng ngay</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

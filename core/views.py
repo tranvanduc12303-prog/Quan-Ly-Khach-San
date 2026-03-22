@@ -10,25 +10,30 @@ from django.db.models import Q, Count, Sum
 from django.http import JsonResponse, HttpResponse
 from django.core.management import call_command
 
-# Import đầy đủ các Model của dự án
+# Import các Model của dự án MyHotel
 from .models import Room, Booking, Destination, Review, Service
 
-# --- KIỂM TRA QUYỀN TRUY CẬP ---
+# =================================================================
+# 1. HỆ THỐNG KIỂM TRA QUYỀN (PERMISSIONS)
+# =================================================================
+
 def is_admin(user):
-    """Xác định người dùng có quyền vào trang quản trị hay không"""
+    """Kiểm tra xem người dùng có phải là Admin/Staff không"""
     return user.is_authenticated and user.is_staff
 
-# --- 1. TRANG CHỦ, TÌM KIẾM & ĐIỂM ĐẾN ---
+# =================================================================
+# 2. QUẢN LÝ TRANG CHỦ & TÌM KIẾM PHÒNG
+# =================================================================
+
 def home(request):
     """
-    Xử lý hiển thị trang chủ.
-    - Lấy danh sách điểm đến.
-    - Tìm kiếm phòng theo số phòng, địa chỉ hoặc tên loại phòng.
-    - Sắp xếp phòng trống lên đầu để khách dễ đặt.
+    Xử lý hiển thị danh sách phòng và điểm đến.
+    Hỗ trợ tìm kiếm theo số phòng, địa chỉ hoặc loại phòng.
     """
     query = request.GET.get('q', '').strip()
     destinations = Destination.objects.all()
     
+    # Ưu tiên hiển thị phòng trống lên trước
     rooms = Room.objects.all().order_by('-is_available', 'price')
     
     if query:
@@ -46,90 +51,24 @@ def home(request):
     }
     return render(request, 'core/home.html', context)
 
-# --- 2. HỆ THỐNG THANH TOÁN QR (VIETQR) ---
-@login_required
-def payment_page(request, booking_id):
-    """
-    Tạo mã QR VietQR động.
-    - BANK_ID: Ngân hàng quân đội MB.
-    - Ép kiểu int cho số tiền để tránh lỗi hiển thị trên môi trường Render.
-    """
-    booking = get_object_or_404(Booking, id=booking_id, user=request.user)
-    
-    BANK_ID = "MB" 
-    ACCOUNT_NO = "0987654321" 
-    ACCOUNT_NAME = "KHACH SAN MYHOTEL"
-    
-    try:
-        amount = int(booking.room.price) if booking.room.price else 0
-    except (ValueError, TypeError):
-        amount = 0
-        
-    description = f"MYHOTEL{booking.id}"
-    qr_url = f"https://img.vietqr.io/image/{BANK_ID}-{ACCOUNT_NO}-compact2.png?amount={amount}&addInfo={description}&accountName={ACCOUNT_NAME}"
-    
-    return render(request, 'core/payment.html', {
-        'booking': booking, 
-        'qr_url': qr_url,
-        'description': description,
-        'total_price': amount
-    })
+# =================================================================
+# 3. CHI TIẾT PHÒNG, ĐẶT PHÒNG & ĐÁNH GIÁ
+# =================================================================
 
-# --- 3. QUẢN TRỊ VIÊN - DASHBOARD & THỐNG KÊ CHI TIẾT ---
-@user_passes_test(is_admin)
-def admin_dashboard(request):
-    """
-    Trung tâm điều hành của Admin.
-    - Thống kê doanh thu thực tế từ các đơn đã duyệt.
-    - Chuẩn bị dữ liệu mảng cho Chart.js hiển thị biểu đồ.
-    - Liệt kê các đơn hàng 'pending' cần xử lý ngay.
-    """
-    total_revenue = Booking.objects.filter(
-        status__in=['approved', 'completed']
-    ).aggregate(total=Sum('room__price'))['total'] or 0
-    
-    pending_bookings = Booking.objects.filter(status='pending').select_related('user', 'room').order_by('-id')
-
-    # Mapping trạng thái sang tiếng Việt cho biểu đồ
-    status_map = {'pending': 'Chờ duyệt', 'approved': 'Đã duyệt', 'rejected': 'Từ chối', 'completed': 'Hoàn thành'}
-    status_stats = Booking.objects.values('status').annotate(total=Count('id'))
-    
-    booking_labels = [status_map.get(s['status'], s['status']) for s in status_stats]
-    booking_data = [s['total'] for s in status_stats]
-
-    # Thống kê phòng theo khu vực
-    room_stats = Room.objects.values('address').annotate(total=Count('id'))
-    
-    context = {
-        'total_revenue': total_revenue,
-        'pending_bookings': pending_bookings,
-        'booking_labels': booking_labels,
-        'booking_data': booking_data,
-        'room_labels': [r['address'] for r in room_stats],
-        'room_data': [r['total'] for r in room_stats],
-        'room_count': Room.objects.count(),
-        'user_count': User.objects.count(),
-        'booking_total': Booking.objects.count(),
-    }
-    return render(request, 'core/dashboard.html', context)
-
-# --- 4. CHI TIẾT PHÒNG, ĐẶT PHÒNG & ĐÁNH GIÁ TỪ KHÁCH ---
 def room_detail(request, pk):
     """
-    Xử lý logic tại trang chi tiết phòng.
-    - Hiển thị thông tin phòng, dịch vụ đi kèm và các đánh giá cũ.
-    - Xử lý Form đặt phòng (kiểm tra ngày nhận/trả).
-    - Xử lý Form gửi đánh giá (rating & comment).
+    Hiển thị chi tiết một phòng khách sạn.
+    Xử lý 2 tác vụ POST: Đặt phòng và Gửi đánh giá.
     """
     room = get_object_or_404(Room, pk=pk)
     reviews = room.reviews.select_related('user').order_by('-created_at')
     services = Service.objects.all()
     
     if request.method == 'POST':
-        # 4.1 Xử lý đặt phòng
+        # Tác vụ 1: Đặt phòng
         if 'book_room' in request.POST:
             if not request.user.is_authenticated:
-                messages.warning(request, "Vui lòng đăng nhập để thực hiện đặt phòng.")
+                messages.warning(request, "Bạn cần đăng nhập để đặt phòng.")
                 return redirect('login')
             
             check_in_str = request.POST.get('check_in')
@@ -140,28 +79,33 @@ def room_detail(request, pk):
                 check_out = datetime.strptime(check_out_str, '%Y-%m-%d').date()
                 
                 if check_out <= check_in:
-                    messages.error(request, "Lỗi: Ngày trả phòng không thể trước hoặc trùng ngày nhận.")
+                    messages.error(request, "Ngày trả phòng phải sau ngày nhận phòng.")
                 else:
                     booking = Booking.objects.create(
-                        user=request.user, room=room, 
-                        check_in=check_in, check_out=check_out, status='pending'
+                        user=request.user, 
+                        room=room, 
+                        check_in=check_in, 
+                        check_out=check_out, 
+                        status='pending'
                     )
-                    messages.success(request, "Đã tạo đơn đặt phòng thành công!")
+                    messages.success(request, "Đã gửi yêu cầu đặt phòng!")
                     return redirect('payment_page', booking_id=booking.id)
             except (ValueError, TypeError):
-                messages.error(request, "Định dạng ngày tháng bạn nhập không hợp lệ.")
+                messages.error(request, "Vui lòng nhập đúng định dạng ngày.")
 
-        # 4.2 Xử lý gửi đánh giá
+        # Tác vụ 2: Gửi đánh giá
         elif 'submit_review' in request.POST:
             if request.user.is_authenticated:
                 rating = request.POST.get('rating', 5)
                 comment = request.POST.get('comment', '').strip()
                 if comment:
                     Review.objects.create(
-                        room=room, user=request.user,
-                        rating=int(rating), comment=comment
+                        room=room, 
+                        user=request.user,
+                        rating=int(rating), 
+                        comment=comment
                     )
-                    messages.success(request, "Cảm ơn bạn đã để lại ý kiến đóng góp!")
+                    messages.success(request, "Cảm ơn bạn đã đánh giá!")
                 return redirect('room_detail', pk=pk)
 
     return render(request, 'core/room_detail.html', {
@@ -170,110 +114,192 @@ def room_detail(request, pk):
         'services': services
     })
 
-# --- 5. ĐIỀU PHỐI ĐƠN HÀNG (QUYỀN ADMIN) ---
-@user_passes_test(is_admin)
-def manage_booking(request, pk, action):
-    """
-    Cho phép Admin duyệt đơn từ Dashboard.
-    - 'approve': Đổi trạng thái đơn và khóa phòng (is_available = False).
-    - 'reject': Đổi trạng thái đơn và mở lại phòng.
-    """
-    booking = get_object_or_404(Booking, pk=pk)
-    
-    if action == 'approve':
-        booking.status = 'approved'
-        booking.room.is_available = False
-        messages.success(request, f"Đã phê duyệt đơn #{booking.id}")
-    elif action == 'reject':
-        booking.status = 'rejected'
-        booking.room.is_available = True
-        messages.warning(request, f"Đã từ chối đơn #{booking.id}")
-    
-    booking.room.save()
-    booking.save()
-    return redirect('admin_dashboard')
+# =================================================================
+# 4. TRANG CÁ NHÂN & QUẢN LÝ LỊCH SỬ ĐẶT PHÒNG
+# =================================================================
 
-# --- 6. TRỢ LÝ ẢO AI (NÂNG CẤP VỚI GOOGLE GEMINI) ---
-def ai_assistant(request):
+@login_required
+def profile(request):
     """
-    Chatbot Gemini thế hệ mới.
-    - Sử dụng model gemini-1.5-flash cực nhanh.
-    - Tự động lấy tên người dùng để chào hỏi thân thiện.
-    - Cung cấp dữ liệu thực tế từ Database để AI trả lời chính xác thông tin phòng.
+    Trang thông tin cá nhân của người dùng.
+    Hiển thị thông tin cơ bản và các đơn đặt phòng gần đây.
     """
-    user_msg = request.GET.get('message', '').strip()
-    api_key = os.environ.get('GEMINI_API_KEY')
+    user = request.user
+    user_bookings = Booking.objects.filter(user=user).select_related('room').order_by('-id')
     
-    if not user_msg:
-        return JsonResponse({'reply': "Chào bạn! Tôi là trợ lý ảo của MyHotel. Tôi có thể giúp gì cho bạn?"})
+    # Tính toán một số thống kê nhanh cho profile
+    stats = {
+        'total': user_bookings.count(),
+        'approved': user_bookings.filter(status='approved').count(),
+        'pending': user_bookings.filter(status='pending').count(),
+    }
     
-    if not api_key:
-        return JsonResponse({'reply': "Hệ thống AI hiện đang bảo trì API Key."})
-    
-    try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        
-        # Tạo ngữ cảnh thông minh: AI biết được phòng nào đang trống
-        active_rooms = Room.objects.filter(is_available=True)[:3]
-        room_data = ", ".join([f"Phòng {r.room_number} ({r.price}đ)" for r in active_rooms])
-        
-        user_name = request.user.username if request.user.is_authenticated else "khách hàng"
-        
-        prompt = f"""
-        Bạn là nhân viên lễ tân của khách sạn MyHotel. Hãy trả lời {user_name} thật lịch sự.
-        Dữ liệu phòng trống hiện tại: {room_data}.
-        Câu hỏi của khách: {user_msg}
-        Hãy tư vấn dựa trên dữ liệu trên và trả lời bằng tiếng Việt ngắn gọn.
-        """
-        
-        response = model.generate_content(prompt)
-        return JsonResponse({'reply': response.text})
-    except Exception as e:
-        return JsonResponse({'reply': f"AI đang gặp lỗi kỹ thuật: {str(e)}"})
+    context = {
+        'user': user,
+        'bookings': user_bookings,
+        'stats': stats
+    }
+    return render(request, 'core/profile.html', context)
 
-# --- 7. QUẢN LÝ TÀI KHOẢN & HỆ THỐNG RENDER ---
-def register(request):
-    """Xử lý đăng ký tài khoản mới cho khách hàng."""
+@login_required
+def edit_profile(request):
+    """Cập nhật thông tin cá nhân của người dùng."""
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            messages.success(request, f'Chúc mừng {user.username}! Bạn đã có thể đăng nhập.')
-            return redirect('login')
-    else:
-        form = UserCreationForm()
-    return render(request, 'registration/register.html', {'form': form})
+        request.user.first_name = request.POST.get('first_name', '')
+        request.user.last_name = request.POST.get('last_name', '')
+        request.user.email = request.POST.get('email', '')
+        request.user.save()
+        messages.success(request, "Đã cập nhật hồ sơ thành công!")
+        return redirect('profile')
+    return render(request, 'core/edit_profile.html')
 
 @login_required
 def my_bookings(request):
-    """Trang 'Chỗ nghỉ của tôi' hiển thị lịch sử đặt phòng của cá nhân."""
-    # Dùng select_related('room') để tránh lỗi 500 khi truy cập dữ liệu liên kết trên Render.
+    """Hiển thị danh sách tất cả phòng khách đã đặt."""
     bookings = Booking.objects.filter(user=request.user).select_related('room').order_by('-id')
     return render(request, 'core/my_bookings.html', {'bookings': bookings})
 
 @login_required
 def cancel_booking(request, pk):
-    """Cho phép khách hàng tự hủy đơn hàng nếu chưa được Admin duyệt."""
+    """Cho phép khách hàng tự hủy đơn khi đang ở trạng thái Chờ duyệt."""
     booking = get_object_or_404(Booking, pk=pk, user=request.user)
     if booking.status == 'pending':
         booking.delete()
-        messages.success(request, "Đã hủy đơn hàng thành công.")
+        messages.success(request, "Đã hủy đơn hàng.")
     else:
-        messages.error(request, "Đơn hàng này đã được xử lý, bạn không thể tự hủy.")
+        messages.error(request, "Không thể hủy đơn đã qua xử lý.")
     return redirect('my_bookings')
 
+# =================================================================
+# 5. HỆ THỐNG THANH TOÁN VIETQR
+# =================================================================
+
+@login_required
+def payment_page(request, booking_id):
+    """Tạo mã QR thanh toán động cho từng đơn hàng."""
+    booking = get_object_or_404(Booking, id=booking_id, user=request.user)
+    
+    # Cấu hình thông tin thụ hưởng
+    bank_id = "MB" 
+    account_no = "0987654321" 
+    account_name = "KHACH SAN MYHOTEL"
+    
+    amount = int(booking.room.price) if booking.room.price else 0
+    description = f"MYHOTEL{booking.id}"
+    
+    # URL gọi API VietQR để tạo ảnh QR
+    qr_url = (
+        f"https://img.vietqr.io/image/{bank_id}-{account_no}-compact2.png"
+        f"?amount={amount}&addInfo={description}&accountName={account_name}"
+    )
+    
+    return render(request, 'core/payment.html', {
+        'booking': booking, 
+        'qr_url': qr_url,
+        'total_price': amount
+    })
+
+# =================================================================
+# 6. DASHBOARD QUẢN TRỊ (ADMIN ONLY)
+# =================================================================
+
+@user_passes_test(is_admin)
+def admin_dashboard(request):
+    """Trang thống kê tổng quan dành cho quản lý khách sạn."""
+    # Thống kê doanh thu từ các đơn đã thanh toán/duyệt
+    revenue_data = Booking.objects.filter(
+        status__in=['approved', 'completed']
+    ).aggregate(total=Sum('room__price'))
+    total_revenue = revenue_data['total'] or 0
+    
+    # Danh sách chờ xử lý
+    pending_list = Booking.objects.filter(status='pending').select_related('user', 'room').order_by('-id')
+
+    # Dữ liệu cho biểu đồ Chart.js
+    status_counts = Booking.objects.values('status').annotate(total=Count('id'))
+    status_map = {'pending': 'Chờ', 'approved': 'Duyệt', 'rejected': 'Hủy', 'completed': 'Xong'}
+    
+    labels = [status_map.get(s['status'], s['status']) for s in status_counts]
+    values = [s['total'] for s in status_counts]
+
+    context = {
+        'total_revenue': total_revenue,
+        'pending_bookings': pending_list,
+        'booking_labels': labels,
+        'booking_data': values,
+        'room_count': Room.objects.count(),
+        'user_count': User.objects.count(),
+    }
+    return render(request, 'core/dashboard.html', context)
+
+@user_passes_test(is_admin)
+def manage_booking(request, pk, action):
+    """Admin phê duyệt hoặc từ chối đơn đặt phòng."""
+    booking = get_object_or_404(Booking, pk=pk)
+    
+    if action == 'approve':
+        booking.status = 'approved'
+        booking.room.is_available = False # Khóa phòng khi đã duyệt
+    elif action == 'reject':
+        booking.status = 'rejected'
+        booking.room.is_available = True
+    
+    booking.room.save()
+    booking.save()
+    messages.info(request, f"Đã cập nhật trạng thái đơn #{booking.id}")
+    return redirect('admin_dashboard')
+
+# =================================================================
+# 7. TRỢ LÝ AI & TIỆN ÍCH HỆ THỐNG
+# =================================================================
+
+def ai_assistant(request):
+    """Tích hợp Google Gemini AI để tư vấn phòng cho khách."""
+    user_query = request.GET.get('message', '').strip()
+    api_key = os.environ.get('GEMINI_API_KEY')
+    
+    if not user_query:
+        return JsonResponse({'reply': "Chào bạn! Tôi có thể giúp gì cho bạn hôm nay?"})
+    
+    if not api_key:
+        return JsonResponse({'reply': "AI đang bận, vui lòng thử lại sau."})
+    
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        # Cung cấp dữ liệu thực tế cho AI
+        rooms_available = Room.objects.filter(is_available=True)[:3]
+        info = ", ".join([f"Phòng {r.room_number} giá {r.price}" for r in rooms_available])
+        
+        prompt = f"Bạn là lễ tân khách sạn. Hãy tư vấn ngắn gọn. Dữ liệu phòng trống: {info}. Câu hỏi: {user_query}"
+        response = model.generate_content(prompt)
+        
+        return JsonResponse({'reply': response.text})
+    except Exception as e:
+        return JsonResponse({'reply': f"Lỗi hệ thống AI: {str(e)}"})
+
+def register(request):
+    """Đăng ký tài khoản người dùng mới."""
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Đăng ký thành công! Hãy đăng nhập.")
+            return redirect('login')
+    else:
+        form = UserCreationForm()
+    return render(request, 'registration/register.html', {'form': form})
+
 def setup_database(request):
-    """
-    Công cụ khởi tạo hệ thống dành riêng cho Render.
-    - Tự động chạy migrate.
-    - Tự động tạo tài khoản Superuser để Đức có quyền Admin ngay lập tức.
-    """
+    """Lệnh khởi tạo nhanh dành cho Render (Chạy Migration và tạo Admin)."""
     try:
         call_command('migrate')
         if not User.objects.filter(username='admin_moi').exists():
             User.objects.create_superuser('admin_moi', 'admin@hotel.com', 'admin12345')
-            return HttpResponse("Khởi tạo thành công! User: admin_moi | Pass: admin12345")
-        return HttpResponse("Hệ thống đã được thiết lập từ trước đó.")
+            return HttpResponse("Khởi tạo thành công tài khoản admin_moi!")
+        return HttpResponse("Hệ thống đã ổn định.")
     except Exception as e:
-        return HttpResponse(f"Lỗi khởi tạo: {str(e)}")
+        return HttpResponse(f"Lỗi: {str(e)}")
+
+# Kết thúc file views.py
