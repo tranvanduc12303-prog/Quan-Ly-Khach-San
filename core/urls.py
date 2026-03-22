@@ -65,3 +65,5 @@ else:
     # Cấu hình dự phòng bắt buộc cho môi trường Production (Render) để không mất ảnh
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    
+    path('webhook/fchat/', views.fchat_webhook, name='fchat_webhook'),
