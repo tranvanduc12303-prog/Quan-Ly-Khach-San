@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -40,8 +41,13 @@
             margin-top: auto;
         }
 
-        /* --- CHATBOX AI STYLE --- */
-        #chat-wrapper { position: fixed; bottom: 20px; right: 20px; z-index: 9999; }
+        /* --- CHATBOX AI STYLE (Đã chỉnh để không đè Fchat) --- */
+        #chat-wrapper { 
+            position: fixed; 
+            bottom: 100px; /* Đẩy lên cao để nhường chỗ cho Fchat ở dưới cùng */
+            right: 20px; 
+            z-index: 9999; 
+        }
         #chat-container {
             width: 350px; height: 450px; 
             background: #1e1e1e; border: 1px solid #333;
@@ -198,5 +204,7 @@
             box.scrollTop = box.scrollHeight;
         }
     </script>
-</body>
+
+    <script type="text/javascript" src="https://cdn.fchat.vn/assets/embed/webchat.js?id=69c05bca7d9a04f2df000dd5" async="async"></script>
+    </body>
 </html>
