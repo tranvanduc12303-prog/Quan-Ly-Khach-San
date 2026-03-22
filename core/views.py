@@ -252,6 +252,11 @@ def cancel_booking(request, pk):
     else:
         messages.error(request, "Không thể hủy đơn đã được xử lý.")
     return redirect('profile')
+@login_required
+def my_bookings(request):
+    """Hiển thị danh sách tất cả phòng khách đã đặt (đầy đủ)."""
+    bookings = Booking.objects.filter(user=request.user).select_related('room').order_by('-id')
+    return render(request, 'core/my_bookings.html', {'bookings': bookings})
 
 # =================================================================
 # 7. QUẢN TRỊ VIÊN (ADMIN DASHBOARD)
