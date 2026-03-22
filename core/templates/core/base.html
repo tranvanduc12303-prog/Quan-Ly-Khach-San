@@ -86,7 +86,10 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <div class="navbar-nav ms-auto align-items-center">
                     {% if user.is_authenticated %}
-                        <span class="nav-link text-light me-3 small">Chào, <strong>{{ user.username }}</strong></span>
+                        <a href="{% url 'profile' %}" class="nav-link text-light me-3 small" style="text-decoration: none;">
+                            <i class="bi bi-person-circle"></i> Chào, <strong>{{ user.username }}</strong>
+                        </a>
+                        
                         <a class="nav-link me-3 fw-bold" href="{% url 'my_bookings' %}" style="color: #ffc107;">
                              <i class="bi bi-calendar-check"></i> Chỗ nghỉ
                         </a>
