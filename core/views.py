@@ -264,21 +264,23 @@ def my_bookings(request):
 
 @user_passes_test(is_admin)
 def admin_dashboard(request):
-    """Trang tổng quan dành cho quản lý khách sạn với đầy đủ số liệu và biểu đồ"""
-    # 1. TÍNH TOÁN CÁC CON SỐ THỐNG KÊ (Phần bị thiếu)
-    # Tính tổng doanh thu từ các đơn đã xác nhận hoặc hoàn thành
-    total_revenue = Booking.objects.filter(
+    """Trang tổng quan - Sửa lỗi không hiện số trên các ô thống kê"""
+    
+    # 1. Lấy dữ liệu cho 3 ô màu trên cùng (Khớp chính xác tên biến trong HTML)
+    all_bookings = Booking.objects.all()
+    total_bookings = all_bookings.count()
+    approved_bookings = all_bookings.filter(status__in=['approved', 'completed']).count()
+    pending_bookings_count = all_bookings.filter(status='pending').count()
+    
+    # 2. Tính doanh thu (Nếu bạn có dùng ở chỗ khác)
+    total_revenue = all_bookings.filter(
         status__in=['approved', 'completed']
     ).aggregate(total_sum=Sum('room__price'))['total_sum'] or 0
     
-    # Đếm số lượng thực tế trong hệ thống
-    room_count = Room.objects.count()
-    user_count = User.objects.count()
+    # 3. Danh sách hiển thị ở bảng "Đơn đặt phòng chờ duyệt"
+    pending_bookings = all_bookings.filter(status='pending').select_related('user', 'room').order_by('-id')
     
-    # 2. LẤY DANH SÁCH ĐƠN HÀNG CHỜ DUYỆT (Hiển thị ở bảng dưới)
-    pending_bookings = Booking.objects.filter(status='pending').select_related('user', 'room').order_by('-id')
-    
-    # 3. DỮ LIỆU BIỂU ĐỒ "TRẠNG THÁI ĐƠN HÀNG" (Tiếng Việt)
+    # 4. Dữ liệu biểu đồ (Tiếng Việt)
     status_counts = Booking.objects.values('status').annotate(total=Count('id'))
     status_map = {
         'pending': 'Chờ duyệt',
@@ -290,16 +292,21 @@ def admin_dashboard(request):
     booking_labels = [status_map.get(item['status'], item['status']) for item in status_counts]
     booking_data = [item['total'] for item in status_counts]
     
-    # 4. DỮ LIỆU BIỂU ĐỒ "PHÂN BỔ PHÒNG THEO KHU VỰC"
+    # 5. Dữ liệu biểu đồ khu vực
     region_counts = Room.objects.values('address').annotate(total=Count('id'))
-    room_labels = [item['address'] if item['address'] else "Chưa xác định" for item in region_counts]
+    room_labels = [item['address'] if item['address'] else "Khác" for item in region_counts]
     room_data = [item['total'] for item in region_counts]
     
-    # 5. TRẢ DỮ LIỆU VỀ TEMPLATE
     context = {
-        'revenue': total_revenue,          # Con số doanh thu
-        'room_count': room_count,          # Con số tổng số phòng
-        'user_count': user_count,          # Con số tổng số khách
+        # CÁC BIẾN QUAN TRỌNG ĐỂ HIỆN SỐ TRÊN Ô MÀU:
+        'total_bookings': total_bookings,
+        'approved_bookings': approved_bookings,
+        'pending_bookings_count': pending_bookings_count,
+        
+        # CÁC BIẾN KHÁC:
+        'revenue': total_revenue,
+        'room_count': Room.objects.count(),
+        'user_count': User.objects.count(),
         'pending_bookings': pending_bookings,
         'booking_labels': booking_labels,
         'booking_data': booking_data,
