@@ -264,23 +264,40 @@ def my_bookings(request):
 
 @user_passes_test(is_admin)
 def admin_dashboard(request):
-    """Trang tổng quan dành cho quản lý khách sạn"""
+    """Trang tổng quan dành cho quản lý khách sạn với đầy đủ dữ liệu biểu đồ"""
+    # 1. Tính tổng doanh thu
     total_revenue = Booking.objects.filter(
         status__in=['approved', 'completed']
     ).aggregate(total_sum=Sum('room__price'))['total_sum'] or 0
     
-    pending_approvals = Booking.objects.filter(status='pending').select_related('user', 'room').order_by('-id')
+    # 2. Lấy danh sách đơn hàng chờ duyệt (Đã đổi tên cho khớp với HTML)
+    pending_bookings = Booking.objects.filter(status='pending').select_related('user', 'room').order_by('-id')
     
-    # Dữ liệu phục vụ biểu đồ thống kê
-    booking_counts = Booking.objects.values('status').annotate(count_id=Count('id'))
+    # 3. Dữ liệu cho biểu đồ "Trạng thái đơn hàng" (Doughnut Chart)
+    # Lấy số lượng theo từng status
+    status_counts = Booking.objects.values('status').annotate(total=Count('id'))
+    booking_labels = [item['status'].capitalize() for item in status_counts]
+    booking_data = [item['total'] for item in status_counts]
     
-    return render(request, 'core/dashboard.html', {
+    # 4. Dữ liệu cho biểu đồ "Phân bổ phòng" (Bar Chart)
+    # Thống kê số lượng phòng theo loại phòng (Room Type)
+    # Lưu ý: RoomType là một Model liên kết với Room
+    room_counts = Room.objects.values('room_type__name').annotate(total=Count('id'))
+    room_labels = [item['room_type__name'] if item['room_type__name'] else "Khác" for item in room_counts]
+    room_data = [item['total'] for item in room_counts]
+    
+    # 5. Trả dữ liệu về Template
+    context = {
         'revenue': total_revenue,
-        'pending_list': pending_approvals,
+        'pending_bookings': pending_bookings, # Biến này hiển thị bảng đơn hàng
         'room_count': Room.objects.count(),
         'user_count': User.objects.count(),
-        'chart_data': list(booking_counts)
-    })
+        'booking_labels': booking_labels,      # Biến này cho biểu đồ tròn
+        'booking_data': booking_data,
+        'room_labels': room_labels,            # Biến này cho biểu đồ cột
+        'room_data': room_data,
+    }
+    return render(request, 'core/dashboard.html', context)
 
 @user_passes_test(is_admin)
 def manage_booking(request, pk, action):
@@ -289,16 +306,18 @@ def manage_booking(request, pk, action):
     
     if action == 'approve':
         booking_to_manage.status = 'approved'
-        booking_to_manage.room.is_available = False # Tạm khóa phòng khi đã duyệt
+        # Khi duyệt, ta tạm thời đánh dấu phòng này là không trống (Is Available = False)
+        booking_to_manage.room.is_available = False
+        messages.success(request, f"Đã phê duyệt đơn hàng #{booking_to_manage.id}")
     elif action == 'reject':
         booking_to_manage.status = 'rejected'
+        # Nếu từ chối, phòng vẫn trống để người khác đặt
         booking_to_manage.room.is_available = True
+        messages.warning(request, f"Đã từ chối đơn hàng #{booking_to_manage.id}")
         
     booking_to_manage.room.save()
     booking_to_manage.save()
-    messages.info(request, f"Đã cập nhật đơn hàng mã số #{booking_to_manage.id}")
     return redirect('admin_dashboard')
-
 # =================================================================
 # 8. TIỆN ÍCH HỆ THỐNG & ĐĂNG KÝ
 # =================================================================
