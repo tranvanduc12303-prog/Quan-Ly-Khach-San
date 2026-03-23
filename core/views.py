@@ -264,54 +264,61 @@ def my_bookings(request):
 
 @user_passes_test(is_admin)
 def admin_dashboard(request):
-    """Trang tổng quan dành cho quản lý khách sạn với đầy đủ dữ liệu biểu đồ"""
+    """Trang tổng quan dành cho quản lý khách sạn với dữ liệu Tiếng Việt và Khu vực"""
     # 1. Tính tổng doanh thu
     total_revenue = Booking.objects.filter(
         status__in=['approved', 'completed']
     ).aggregate(total_sum=Sum('room__price'))['total_sum'] or 0
     
-    # 2. Lấy danh sách đơn hàng chờ duyệt (Đã đổi tên cho khớp với HTML)
+    # 2. Danh sách chờ duyệt
     pending_bookings = Booking.objects.filter(status='pending').select_related('user', 'room').order_by('-id')
     
-    # 3. Dữ liệu cho biểu đồ "Trạng thái đơn hàng" (Doughnut Chart)
-    # Lấy số lượng theo từng status
+    # 3. Dữ liệu biểu đồ "Trạng thái đơn hàng" -> Chuyển sang Tiếng Việt
     status_counts = Booking.objects.values('status').annotate(total=Count('id'))
-    booking_labels = [item['status'].capitalize() for item in status_counts]
+    
+    # Từ điển dịch trạng thái
+    status_map = {
+        'pending': 'Chờ duyệt',
+        'approved': 'Đã xác nhận',
+        'rejected': 'Đã từ chối',
+        'completed': 'Hoàn thành',
+        'canceled': 'Đã hủy'
+    }
+    
+    booking_labels = [status_map.get(item['status'], item['status']) for item in status_counts]
     booking_data = [item['total'] for item in status_counts]
     
-    # 4. Dữ liệu cho biểu đồ "Phân bổ phòng" (Bar Chart)
-    # Thống kê số lượng phòng theo loại phòng (Room Type)
-    # Lưu ý: RoomType là một Model liên kết với Room
-    room_counts = Room.objects.values('room_type__name').annotate(total=Count('id'))
-    room_labels = [item['room_type__name'] if item['room_type__name'] else "Khác" for item in room_counts]
-    room_data = [item['total'] for item in room_counts]
+    # 4. Dữ liệu biểu đồ "Phân bổ phòng theo khu vực" (Thái Nguyên, Hà Nội...)
+    # Giả sử trường địa chỉ của bạn chứa tên tỉnh thành hoặc bạn dùng field address
+    # Ở đây mình lấy dữ liệu từ field 'address' của model Room
+    region_counts = Room.objects.values('address').annotate(total=Count('id'))
     
-    # 5. Trả dữ liệu về Template
+    room_labels = [item['address'] if item['address'] else "Chưa xác định" for item in region_counts]
+    room_data = [item['total'] for item in region_counts]
+    
     context = {
         'revenue': total_revenue,
-        'pending_bookings': pending_bookings, # Biến này hiển thị bảng đơn hàng
+        'pending_bookings': pending_bookings,
         'room_count': Room.objects.count(),
         'user_count': User.objects.count(),
-        'booking_labels': booking_labels,      # Biến này cho biểu đồ tròn
+        'booking_labels': booking_labels,
         'booking_data': booking_data,
-        'room_labels': room_labels,            # Biến này cho biểu đồ cột
+        'room_labels': room_labels,
         'room_data': room_data,
     }
     return render(request, 'core/dashboard.html', context)
 
 @user_passes_test(is_admin)
 def manage_booking(request, pk, action):
-    """Phê duyệt hoặc từ chối đặt phòng từ phía Admin"""
+    """Phê duyệt hoặc từ chối đặt phòng"""
     booking_to_manage = get_object_or_404(Booking, pk=pk)
     
     if action == 'approve':
         booking_to_manage.status = 'approved'
-        # Khi duyệt, ta tạm thời đánh dấu phòng này là không trống (Is Available = False)
         booking_to_manage.room.is_available = False
         messages.success(request, f"Đã phê duyệt đơn hàng #{booking_to_manage.id}")
     elif action == 'reject':
         booking_to_manage.status = 'rejected'
-        # Nếu từ chối, phòng vẫn trống để người khác đặt
         booking_to_manage.room.is_available = True
         messages.warning(request, f"Đã từ chối đơn hàng #{booking_to_manage.id}")
         
