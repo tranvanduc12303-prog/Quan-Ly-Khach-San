@@ -218,17 +218,25 @@ def payment_page(request, booking_id):
 @login_required
 def profile(request):
     """Hiển thị thông tin hồ sơ và các đơn hàng của khách"""
+    # Lấy danh sách đơn hàng của riêng người dùng đang đăng nhập
     user_bookings = Booking.objects.filter(user=request.user).select_related('room').order_by('-id')
-    stats_data = {
-        'total_bookings': user_bookings.count(),
-        'approved_bookings': user_bookings.filter(status='approved').count(),
-        'pending_bookings': user_bookings.filter(status='pending').count(),
-    }
-    return render(request, 'core/profile.html', {
+    
+    # Tính toán các con số
+    total_bookings = user_bookings.count()
+    # Bao gồm cả 'approved' (Xác nhận) và 'completed' (Thành công) cho khớp với thực tế
+    approved_bookings = user_bookings.filter(status__in=['approved', 'completed']).count()
+    pending_bookings_count = user_bookings.filter(status='pending').count()
+
+    context = {
         'user': request.user, 
         'bookings': user_bookings, 
-        'stats': stats_data
-    })
+        # TRUYỀN TRỰC TIẾP BIẾN RA NGOÀI ĐỂ KHỚP VỚI HTML
+        'total_bookings': total_bookings,
+        'approved_bookings': approved_bookings,
+        'pending_bookings_count': pending_bookings_count,
+    }
+    
+    return render(request, 'core/profile.html', context)
 
 @login_required
 def edit_profile(request):
