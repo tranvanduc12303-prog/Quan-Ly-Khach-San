@@ -264,19 +264,22 @@ def my_bookings(request):
 
 @user_passes_test(is_admin)
 def admin_dashboard(request):
-    """Trang tổng quan dành cho quản lý khách sạn với dữ liệu Tiếng Việt và Khu vực"""
-    # 1. Tính tổng doanh thu
+    """Trang tổng quan dành cho quản lý khách sạn với đầy đủ số liệu và biểu đồ"""
+    # 1. TÍNH TOÁN CÁC CON SỐ THỐNG KÊ (Phần bị thiếu)
+    # Tính tổng doanh thu từ các đơn đã xác nhận hoặc hoàn thành
     total_revenue = Booking.objects.filter(
         status__in=['approved', 'completed']
     ).aggregate(total_sum=Sum('room__price'))['total_sum'] or 0
     
-    # 2. Danh sách chờ duyệt
+    # Đếm số lượng thực tế trong hệ thống
+    room_count = Room.objects.count()
+    user_count = User.objects.count()
+    
+    # 2. LẤY DANH SÁCH ĐƠN HÀNG CHỜ DUYỆT (Hiển thị ở bảng dưới)
     pending_bookings = Booking.objects.filter(status='pending').select_related('user', 'room').order_by('-id')
     
-    # 3. Dữ liệu biểu đồ "Trạng thái đơn hàng" -> Chuyển sang Tiếng Việt
+    # 3. DỮ LIỆU BIỂU ĐỒ "TRẠNG THÁI ĐƠN HÀNG" (Tiếng Việt)
     status_counts = Booking.objects.values('status').annotate(total=Count('id'))
-    
-    # Từ điển dịch trạng thái
     status_map = {
         'pending': 'Chờ duyệt',
         'approved': 'Đã xác nhận',
@@ -284,23 +287,20 @@ def admin_dashboard(request):
         'completed': 'Hoàn thành',
         'canceled': 'Đã hủy'
     }
-    
     booking_labels = [status_map.get(item['status'], item['status']) for item in status_counts]
     booking_data = [item['total'] for item in status_counts]
     
-    # 4. Dữ liệu biểu đồ "Phân bổ phòng theo khu vực" (Thái Nguyên, Hà Nội...)
-    # Giả sử trường địa chỉ của bạn chứa tên tỉnh thành hoặc bạn dùng field address
-    # Ở đây mình lấy dữ liệu từ field 'address' của model Room
+    # 4. DỮ LIỆU BIỂU ĐỒ "PHÂN BỔ PHÒNG THEO KHU VỰC"
     region_counts = Room.objects.values('address').annotate(total=Count('id'))
-    
     room_labels = [item['address'] if item['address'] else "Chưa xác định" for item in region_counts]
     room_data = [item['total'] for item in region_counts]
     
+    # 5. TRẢ DỮ LIỆU VỀ TEMPLATE
     context = {
-        'revenue': total_revenue,
+        'revenue': total_revenue,          # Con số doanh thu
+        'room_count': room_count,          # Con số tổng số phòng
+        'user_count': user_count,          # Con số tổng số khách
         'pending_bookings': pending_bookings,
-        'room_count': Room.objects.count(),
-        'user_count': User.objects.count(),
         'booking_labels': booking_labels,
         'booking_data': booking_data,
         'room_labels': room_labels,
