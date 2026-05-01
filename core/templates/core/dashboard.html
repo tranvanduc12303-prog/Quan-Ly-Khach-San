@@ -4,9 +4,14 @@
 <div class="container mt-5 mb-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="fw-bold text-warning mb-0">Hệ Thống Quản Trị MyHotel</h2>
-        <span class="badge bg-dark border border-secondary p-2">
-            <i class="bi bi-calendar3 me-2"></i>{% now "d/m/Y" %}
-        </span>
+        <div class="d-flex gap-2 align-items-center">
+            <a href="{% url 'manage_rooms' %}" class="btn btn-outline-warning" title="Quản lý hình ảnh phòng">
+                <i class="bi bi-image"></i> Quản lý ảnh phòng
+            </a>
+            <span class="badge bg-dark border border-secondary p-2">
+                <i class="bi bi-calendar3 me-2"></i>{% now "d/m/Y" %}
+            </span>
+        </div>
     </div>
     
     <div class="row g-4 mb-5">

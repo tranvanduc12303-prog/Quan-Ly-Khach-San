@@ -35,6 +35,12 @@ urlpatterns = [
     # Trang thống kê biểu đồ, doanh thu và quản lý tập trung
     path('dashboard/', views.admin_dashboard, name='admin_dashboard'),
     
+    # Quản lý danh sách phòng (xem, sửa hình ảnh)
+    path('manage-rooms/', views.manage_rooms, name='manage_rooms'),
+    
+    # Chỉnh sửa hình ảnh phòng
+    path('edit-room-image/<int:room_id>/', views.edit_room_image, name='edit_room_image'),
+    
     # Duyệt (approve) hoặc Từ chối (reject) đơn đặt phòng của khách
     path('manage-booking/<int:pk>/<str:action>/', views.manage_booking, name='manage_booking'),
     

@@ -15,6 +15,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 # Import các Model của dự án MyHotel
 from .models import Room, Booking, Destination, Review, Service, UserProfile
+from .forms import RoomImageForm
 
 # =================================================================
 # 1. CẤU HÌNH HỆ THỐNG & TRỢ LÝ AI (GEMINI)
@@ -415,6 +416,37 @@ def manage_booking(request, pk, action):
     booking_to_manage.room.save()
     booking_to_manage.save()
     return redirect('admin_dashboard')
+
+@user_passes_test(is_admin)
+def edit_room_image(request, room_id):
+    """Chỉnh sửa hình ảnh phòng"""
+    room = get_object_or_404(Room, pk=room_id)
+    
+    if request.method == 'POST':
+        form = RoomImageForm(request.POST, request.FILES, instance=room)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Cập nhật hình ảnh cho phòng {room.room_number} thành công!")
+            return redirect('admin_dashboard')
+    else:
+        form = RoomImageForm(instance=room)
+    
+    context = {
+        'form': form,
+        'room': room,
+    }
+    return render(request, 'core/edit_room_image.html', context)
+
+@user_passes_test(is_admin)
+def manage_rooms(request):
+    """Quản lý danh sách phòng (xem, sửa hình ảnh, xóa)"""
+    all_rooms = Room.objects.all().order_by('room_number')
+    
+    context = {
+        'rooms': all_rooms,
+    }
+    return render(request, 'core/manage_rooms.html', context)
+
 # =================================================================
 # 8. TIỆN ÍCH HỆ THỐNG & ĐĂNG KÝ
 # =================================================================

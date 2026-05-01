@@ -6,7 +6,7 @@ class RoomAdmin(admin.ModelAdmin):
     list_display = ('room_number', 'room_type', 'price', 'is_available', 'address')
     list_filter = ('room_type', 'is_available', 'address')
     search_fields = ('room_number', 'address')
-    exclude = ('image',)
+    fields = ('room_number', 'room_type', 'image', 'price', 'is_available', 'address', 'description')
 
 # Admin class for Destination (with image handling)
 class DestinationAdmin(admin.ModelAdmin):
