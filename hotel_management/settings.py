@@ -11,16 +11,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # --- BẢO MẬT & DEBUG ---
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-full-clean-key-2026')
 
-# DEBUG mặc định True để chạy local dễ dàng; Render/production có thể set env DEBUG=False
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+# DEBUG mặc định từ môi trường hoặc False nếu không có biến môi trường
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 _allowed_hosts_env = os.environ.get('ALLOWED_HOSTS')
 if _allowed_hosts_env:
-    ALLOWED_HOSTS = _allowed_hosts_env.split(',')
+    ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts_env.split(',') if host.strip()]
 else:
-    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
-    if not DEBUG:
-        ALLOWED_HOSTS.append('.onrender.com')
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', '.onrender.com']
 
 # --- GOOGLE GEMINI API KEY ---
 # Chỉ lấy key từ biến môi trường, không dùng fallback cứng.
