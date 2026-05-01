@@ -11,8 +11,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # --- BẢO MẬT & DEBUG ---
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-full-clean-key-2026')
 
-# DEBUG mặc định từ môi trường hoặc False nếu không có biến môi trường
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+# DEBUG mặc định từ môi trường hoặc True để debug lỗi
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 _allowed_hosts_env = os.environ.get('ALLOWED_HOSTS')
 if _allowed_hosts_env:
