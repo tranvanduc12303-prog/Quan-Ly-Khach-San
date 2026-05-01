@@ -2,21 +2,63 @@
 {% block content %}
 <div class="container mt-5">
     <div class="row justify-content-center">
-        <div class="col-md-6">
+        <div class="col-md-8">
             <div class="card shadow border-0 p-4" style="border-radius: 15px;">
                 <h4 class="fw-bold mb-4 text-center">Cập nhật thông tin cá nhân</h4>
                 <form method="POST">
                     {% csrf_token %}
-                    <div class="mb-3">
-                        <label class="form-label">Tên (First Name)</label>
-                        <input type="text" name="first_name" class="form-control" value="{{ user.first_name }}">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Tên (First Name)</label>
+                                <input type="text" name="first_name" class="form-control" value="{{ user.first_name }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Họ (Last Name)</label>
+                                <input type="text" name="last_name" class="form-control" value="{{ user.last_name }}">
+                            </div>
+                        </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Họ (Last Name)</label>
-                        <input type="text" name="last_name" class="form-control" value="{{ user.last_name }}">
+                        <label class="form-label">Họ và tên đầy đủ</label>
+                        <input type="text" name="full_name" class="form-control" value="{{ user.profile.full_name }}">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Tuổi</label>
+                                <input type="number" name="age" class="form-control" value="{{ user.profile.age }}" min="1" max="120">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Năm sinh</label>
+                                <input type="number" name="birth_year" class="form-control" value="{{ user.profile.birth_year }}" min="1900" max="2026">
+                            </div>
+                        </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Email</label>
+                        <label class="form-label">Quê quán</label>
+                        <input type="text" name="hometown" class="form-control" value="{{ user.profile.hometown }}">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Số điện thoại</label>
+                                <input type="text" name="phone_number" class="form-control" value="{{ user.profile.phone_number }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Email cá nhân</label>
+                                <input type="email" name="profile_email" class="form-control" value="{{ user.profile.email }}">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email đăng nhập</label>
                         <input type="email" name="email" class="form-control" value="{{ user.email }}">
                     </div>
                     <div class="d-grid">

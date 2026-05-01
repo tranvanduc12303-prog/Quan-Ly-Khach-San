@@ -2,8 +2,8 @@ import google.generativeai as genai
 import os
 
 def ask_gemini(prompt):
-    # Lấy key từ môi trường đã cài trên Render
-    api_key = os.environ.get("GOOGLE_API_KEY")
+    # Lấy key Gemini từ biến môi trường GEMINI_API_KEY
+    api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         return "Chưa cấu hình API Key!"
 

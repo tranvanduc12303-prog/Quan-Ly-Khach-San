@@ -11,8 +11,8 @@
     
     <style>
         body {
-            background-color: #121212;
-            color: #e0e0e0;
+            background-color: #0d0d0d;
+            color: #ffffff;
             font-family: 'Montserrat', sans-serif;
             min-height: 100vh;
             display: flex;
@@ -20,64 +20,509 @@
         }
         .navbar {
             background-color: #1a1a1a !important;
-            border-bottom: 1px solid #333;
+            border-bottom: 2px solid #333;
             padding: 1rem 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
         }
-        .text-price { color: #ffc107 !important; font-weight: bold; }
+        .navbar-brand {
+            color: #ffc107 !important;
+            font-weight: 700;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+        .nav-link {
+            color: #ffffff !important;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        .nav-link:hover {
+            color: #ffc107 !important;
+        }
+        .text-price { 
+            color: #ffc107 !important; 
+            font-weight: bold; 
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
         .btn-yellow {
             background-color: #ffc107 !important;
-            border: none !important;
+            border: 2px solid #ffc107 !important;
             color: #000 !important;
             font-weight: bold;
-            transition: 0.3s;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(255,193,7,0.3);
         }
-        .btn-yellow:hover { transform: scale(1.05); background-color: #e0a800 !important; }
+        .btn-yellow:hover { 
+            transform: translateY(-1px);
+            background-color: #e0a800 !important; 
+            border-color: #e0a800 !important;
+            box-shadow: 0 4px 12px rgba(255,193,7,0.4);
+        }
+        
+        /* Card improvements */
+        .card {
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .card-header {
+            background-color: #222 !important;
+            border-bottom: 1px solid #444;
+            color: #ffffff;
+            font-weight: 600;
+        }
+        .card-body {
+            color: #ffffff;
+        }
+        
+        /* Table improvements */
+        .table {
+            color: #ffffff;
+        }
+        .table thead th {
+            background-color: #2a2a2a;
+            border-color: #444;
+            color: #ffffff;
+            font-weight: 600;
+        }
+        .table tbody td {
+            border-color: #333;
+            color: #e0e0e0;
+        }
+        .table-hover tbody tr:hover {
+            background-color: #252525;
+        }
+        
+        /* Form improvements */
+        .form-control {
+            background-color: #2a2a2a;
+            border: 1px solid #555;
+            color: #ffffff;
+        }
+        .form-control:focus {
+            background-color: #2a2a2a;
+            border-color: #ffc107;
+            color: #ffffff;
+            box-shadow: 0 0 0 0.2rem rgba(255,193,7,0.25);
+        }
+        .form-label {
+            color: #ffffff;
+            font-weight: 500;
+        }
+        
+        /* Alert improvements */
+        .alert {
+            border: 1px solid;
+        }
+        .alert-success {
+            background-color: #1a4d3a;
+            border-color: #28a745;
+            color: #d4edda;
+        }
+        .alert-danger {
+            background-color: #4d1a1a;
+            border-color: #dc3545;
+            color: #f5c6cb;
+        }
+        .alert-warning {
+            background-color: #4d3d1a;
+            border-color: #ffc107;
+            color: #fff3cd;
+        }
         
         /* --- FOOTER STYLE --- */
         footer {
             background-color: #1a1a1a;
-            border-top: 1px solid #333;
+            border-top: 2px solid #333;
             padding: 30px 0;
             margin-top: auto;
+            color: #cccccc;
+        }
+        footer a {
+            color: #ffc107;
+            text-decoration: none;
+        }
+        footer a:hover {
+            color: #e0a800;
         }
 
-        /* --- CHATBOX AI STYLE (Đã chỉnh để không đè Fchat) --- */
-        #chat-wrapper { 
-            position: fixed; 
-            bottom: 100px; /* Đẩy lên cao để nhường chỗ cho Fchat ở dưới cùng */
-            right: 20px; 
-            z-index: 9999; 
+        /* --- CHATBOX STYLE --- */
+        #hotel-chat-widget {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            z-index: 9999;
+            font-family: 'Montserrat', sans-serif;
         }
-        #chat-container {
-            width: 350px; height: 450px; 
-            background: #1e1e1e; border: 1px solid #333;
-            border-radius: 15px; display: none;
-            flex-direction: column; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        #hotel-chat-button {
+            width: 62px;
+            height: 62px;
+            border-radius: 50%;
+            background: #ffc107;
+            border: none;
+            color: #000;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        #hotel-chat-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+        }
+        #hotel-chat-panel {
+            width: 360px;
+            max-width: calc(100vw - 40px);
+            height: 500px;
+            background: #1a1a1a;
+            border: 2px solid #333;
+            border-radius: 22px;
             overflow: hidden;
+            box-shadow: 0 18px 46px rgba(0,0,0,0.35);
+            display: none;
+            flex-direction: column;
+            margin-bottom: 12px;
         }
-        #chat-header {
-            background: #ffc107; color: #000; padding: 12px 15px;
-            font-weight: bold; display: flex; justify-content: space-between; align-items: center;
+        #hotel-chat-header {
+            background: #ffc107;
+            color: #000;
+            padding: 16px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 700;
+            border-bottom: 2px solid #e0a800;
         }
-        #chat-messages {
-            flex: 1; overflow-y: auto; padding: 15px;
-            display: flex; flex-direction: column; gap: 10px;
-            background-color: #121212;
+        #hotel-chat-body {
+            flex: 1;
+            padding: 18px;
+            background: #0f0f0f;
+            overflow-y: auto;
+            gap: 12px;
+            display: flex;
+            flex-direction: column;
         }
-        .msg { padding: 10px 14px; border-radius: 15px; max-width: 85%; font-size: 0.9rem; line-height: 1.4; }
-        .msg-ai { background: #2a2a2a; align-self: flex-start; color: #fff; border-bottom-left-radius: 2px; }
-        .msg-user { background: #ffc107; color: #000; align-self: flex-end; border-bottom-right-radius: 2px; font-weight: 500; }
-        #chat-input-area { padding: 12px; border-top: 1px solid #333; display: flex; gap: 8px; background: #1a1a1a; }
-        #chat-input-area input {
-            flex: 1; background: #2a2a2a; border: 1px solid #444;
-            color: white; border-radius: 20px; padding: 6px 15px; outline: none;
+        .hotel-chat-bubble {
+            max-width: 84%;
+            padding: 12px 14px;
+            border-radius: 18px;
+            font-size: 0.94rem;
+            line-height: 1.5;
+            word-break: break-word;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
-        #chat-toggle {
-            width: 60px; height: 60px; background: #ffc107;
-            border-radius: 50%; display: flex; justify-content: center;
-            align-items: center; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4);
-            transition: 0.3s;
+        .hotel-chat-bubble.user {
+            align-self: flex-end;
+            background: #ffc107;
+            color: #000;
+            border-bottom-right-radius: 4px;
+            font-weight: 500;
+        }
+        .hotel-chat-bubble.ai {
+            align-self: flex-start;
+            background: #2a2a2a;
+            color: #ffffff;
+            border-bottom-left-radius: 4px;
+            border: 1px solid #444;
+        }
+        #hotel-chat-footer {
+            padding: 14px 16px 18px;
+            background: #1a1a1a;
+            border-top: 1px solid #333;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        #hotel-chat-input {
+            flex: 1;
+            background: #2a2a2a;
+            color: #ffffff;
+            border: 1px solid #555;
+            border-radius: 999px;
+            padding: 10px 16px;
+            outline: none;
+            font-size: 0.9rem;
+        }
+        #hotel-chat-input:focus {
+            border-color: #ffc107;
+            box-shadow: 0 0 0 2px rgba(255,193,7,0.2);
+        }
+        #hotel-chat-send {
+            min-width: 92px;
+            border-radius: 999px;
+            border: none;
+            background: #ffc107;
+            color: #000;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+        #hotel-chat-send:hover {
+            background: #e0a800;
+            transform: scale(1.05);
+        }
+        #hotel-chat-panel.open {
+            display: flex;
+        }
+        
+        /* Button improvements */
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+            color: #ffffff;
+            font-weight: 500;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+            color: #ffffff;
+        }
+        .btn-outline-secondary {
+            color: #cccccc;
+            border-color: #555;
+        }
+        .btn-outline-secondary:hover {
+            background-color: #555;
+            border-color: #777;
+            color: #ffffff;
+        }
+        
+        /* Badge improvements */
+        .badge {
+            font-weight: 600;
+            border-radius: 6px;
+            padding: 6px 12px;
+        }
+        
+        /* Badge color overrides for better contrast */
+        .badge.bg-info {
+            background-color: #0dcaf0 !important;
+            color: #000000 !important;
+        }
+        .badge.bg-warning {
+            background-color: #ffc107 !important;
+            color: #000000 !important;
+        }
+        .badge.bg-success {
+            background-color: #28a745 !important;
+            color: #ffffff !important;
+        }
+        .badge.bg-danger {
+            background-color: #dc3545 !important;
+            color: #ffffff !important;
+        }
+        .badge.bg-secondary {
+            background-color: #6c757d !important;
+            color: #ffffff !important;
+        }
+        .badge.bg-primary {
+            background-color: #007bff !important;
+            color: #ffffff !important;
+        }
+        
+        /* Ensure text-dark doesn't make badges unreadable */
+        .badge.text-dark {
+            color: #000000 !important;
+        }
+        
+        /* Link improvements */
+        a {
+            color: #ffc107;
+            text-decoration: none;
+        }
+        a:hover {
+            color: #e0a800;
+        }
+        
+        /* Text improvements */
+        h1, h2, h3, h4, h5, h6 {
+            color: #ffffff;
+            font-weight: 600;
+        }
+        p, span, div {
+            color: #e0e0e0;
+        }
+        
+        /* Specific improvements for readability */
+        .card-title {
+            color: #ffffff !important;
+            font-weight: 600;
+        }
+        .card-text {
+            color: #e0e0e0;
+        }
+        
+        /* Button text improvements */
+        .btn {
+            font-weight: 500;
+            text-shadow: 0 1px 1px rgba(0,0,0,0.1);
+        }
+        
+        /* Input placeholder improvements */
+        ::placeholder {
+            color: #aaaaaa !important;
+            opacity: 1;
+        }
+        
+        /* Focus states */
+        .form-control:focus,
+        .btn:focus {
+            box-shadow: 0 0 0 0.2rem rgba(255,193,7,0.25) !important;
+        }
+        
+        /* Table text */
+        .table-dark {
+            color: #ffffff;
+        }
+        .table-dark thead th {
+            color: #ffffff;
+            border-color: #444;
+        }
+        .table-dark tbody td {
+            color: #e0e0e0;
+            border-color: #333;
+        }
+        
+        /* Override Bootstrap text-white-50 class for better readability */
+        .text-white-50 {
+            color: #ffffff !important;
+        }
+        
+        /* Table-black improvements */
+        .table-black {
+            background-color: #2a2a2a;
+        }
+        .table-black th {
+            color: #ffffff !important;
+            background-color: #2a2a2a;
+            font-weight: 600;
+        }
+        
+        /* List group improvements */
+        .list-group-item {
+            background-color: #1a1a1a;
+            border-color: #333;
+            color: #e0e0e0;
+        }
+        .list-group-item:hover {
+            background-color: #252525;
+            color: #ffffff;
+        }
+        
+        /* Modal improvements */
+        .modal-content {
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            color: #ffffff;
+        }
+        .modal-header {
+            border-bottom: 1px solid #333;
+        }
+        .modal-footer {
+            border-top: 1px solid #333;
+        }
+        
+        /* Dropdown improvements */
+        .dropdown-menu {
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+        }
+        .dropdown-item {
+            color: #e0e0e0;
+        }
+        .dropdown-item:hover {
+            background-color: #333;
+            color: #ffffff;
+        }
+        
+        /* Breadcrumb improvements */
+        .breadcrumb {
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+        }
+        .breadcrumb-item a {
+            color: #ffc107;
+        }
+        .breadcrumb-item.active {
+            color: #ffffff;
+        }
+        
+        /* Pagination improvements */
+        .page-link {
+            background-color: #1a1a1a;
+            border-color: #333;
+            color: #e0e0e0;
+        }
+        .page-link:hover {
+            background-color: #333;
+            border-color: #555;
+            color: #ffffff;
+        }
+        .page-item.active .page-link {
+            background-color: #ffc107;
+            border-color: #ffc107;
+            color: #000;
+        }
+        
+        /* Progress bar improvements */
+        .progress {
+            background-color: #333;
+        }
+        
+        /* Tooltip improvements */
+        .tooltip-inner {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            border: 1px solid #333;
+        }
+        .tooltip .arrow::before {
+            border-color: #333;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #777;
+        }
+        
+        /* High contrast mode support */
+        @media (prefers-contrast: high) {
+            body {
+                background-color: #000000;
+                color: #ffffff;
+            }
+            .card {
+                background-color: #000000;
+                border: 2px solid #ffffff;
+            }
+            .navbar {
+                background-color: #000000 !important;
+                border-bottom: 2px solid #ffffff;
+            }
+        }
+        
+        /* Print styles */
+        @media print {
+            body {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+            }
+            .card {
+                background-color: #ffffff !important;
+                border: 1px solid #000000 !important;
+                color: #000000 !important;
+            }
+            .btn, .navbar, footer {
+                display: none !important;
+            }
         }
     </style>
 </head>
@@ -145,66 +590,102 @@
         </div>
     </footer>
 
-    <div id="chat-wrapper">
-        <div id="chat-container">
-            <div id="chat-header">
+    <div id="hotel-chat-widget">
+        <div id="hotel-chat-panel" class="">
+            <div id="hotel-chat-header">
                 <span><i class="bi bi-robot"></i> Trợ lý MyHotel</span>
-                <button onclick="toggleChat()" class="btn-close small" style="font-size: 0.7rem;"></button>
+                <button id="hotel-chat-close" class="btn-close"></button>
             </div>
-            <div id="chat-messages">
-                <div class="msg msg-ai">Chào {{ user.username|default:"bạn" }}! Mình là trợ lý thông minh của MyHotel. Bạn cần mình hỗ trợ gì không?</div>
+            <div id="hotel-chat-body">
+                <div class="hotel-chat-bubble ai">Chào bạn! Tôi là trợ lý MyHotel. Hãy nhập câu hỏi để tôi hỗ trợ.</div>
             </div>
-            <div id="chat-input-area">
-                <input type="text" id="ai-input" placeholder="Nhập tin nhắn..." onkeypress="handleKeyPress(event)">
-                <button onclick="sendToAI()" class="btn btn-warning btn-sm rounded-circle shadow-sm"><i class="bi bi-send-fill"></i></button>
+            <div id="hotel-chat-footer">
+                <input id="hotel-chat-input" type="text" placeholder="Hỏi về phòng, giá, dịch vụ...">
+                <button id="hotel-chat-send">Gửi</button>
             </div>
         </div>
-        <div id="chat-toggle" onclick="toggleChat()">
-            <i class="bi bi-chat-dots-fill fs-2 text-dark"></i>
-        </div>
+        <button id="hotel-chat-button" aria-label="Mở chat">
+            <i class="bi bi-chat-dots-fill fs-4"></i>
+        </button>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function toggleChat() {
-            const chat = document.getElementById('chat-container');
-            chat.style.display = (chat.style.display === 'none' || chat.style.display === '') ? 'flex' : 'none';
-            if(chat.style.display === 'flex') {
-                const box = document.getElementById('chat-messages');
-                box.scrollTop = box.scrollHeight;
+        function scrollChatBottom() {
+            const body = document.getElementById('hotel-chat-body');
+            if (body) body.scrollTop = body.scrollHeight;
+        }
+
+        function addChatMessage(text, sender) {
+            const body = document.getElementById('hotel-chat-body');
+            const message = document.createElement('div');
+            message.className = `hotel-chat-bubble ${sender}`;
+            message.textContent = text;
+            body.appendChild(message);
+            scrollChatBottom();
+        }
+
+        function toggleHotelChat() {
+            const panel = document.getElementById('hotel-chat-panel');
+            panel.classList.toggle('open');
+            if (panel.classList.contains('open')) {
+                document.getElementById('hotel-chat-input').focus();
+                scrollChatBottom();
             }
         }
 
-        function handleKeyPress(e) { if (e.key === 'Enter') sendToAI(); }
+        async function sendHotelChat() {
+            const input = document.getElementById('hotel-chat-input');
+            const text = input.value.trim();
+            if (!text) return;
 
-        async function sendToAI() {
-            const input = document.getElementById('ai-input');
-            const box = document.getElementById('chat-messages');
-            const msg = input.value.trim();
-            if (!msg) return;
-
-            box.innerHTML += `<div class="msg msg-user">${msg}</div>`;
+            addChatMessage(text, 'user');
             input.value = '';
-            box.scrollTop = box.scrollHeight;
 
-            const loadingId = 'loading-' + Date.now();
-            box.innerHTML += `
-                <div class="msg msg-ai" id="${loadingId}">
-                    <div class="spinner-border spinner-border-sm text-warning" role="status"></div>
-                </div>`;
-            box.scrollTop = box.scrollHeight;
+            const loadingMessage = document.createElement('div');
+            loadingMessage.className = 'hotel-chat-bubble ai';
+            loadingMessage.textContent = 'Đang gửi...';
+            document.getElementById('hotel-chat-body').appendChild(loadingMessage);
+            scrollChatBottom();
 
             try {
-                const response = await fetch(`/ai-assistant/?message=${encodeURIComponent(msg)}`);
-                const data = await response.json();
-                document.getElementById(loadingId).innerText = data.reply;
-            } catch (error) {
-                document.getElementById(loadingId).innerText = "Lỗi kết nối AI.";
-            }
-            box.scrollTop = box.scrollHeight;
-        }
-    </script>
+                const response = await fetch('/ai-assistant/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
 
-    <script type="text/javascript" src="https://cdn.fchat.vn/assets/embed/webchat.js?id=69c05bca7d9a04f2df000dd5" async="async"></script>
-    </body>
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    loadingMessage.textContent = `Lỗi server: ${response.status}. ${errorText}`;
+                    return;
+                }
+
+                const data = await response.json();
+                loadingMessage.textContent = data.reply || 'Xin lỗi, tôi chưa trả lời được. Vui lòng thử lại.';
+            } catch (error) {
+                console.error('AI chat request failed', error);
+                loadingMessage.textContent = 'Lỗi kết nối. Vui lòng thử lại sau.';
+            }
+            scrollChatBottom();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const button = document.getElementById('hotel-chat-button');
+            const close = document.getElementById('hotel-chat-close');
+            const send = document.getElementById('hotel-chat-send');
+            const input = document.getElementById('hotel-chat-input');
+
+            button.addEventListener('click', toggleHotelChat);
+            close.addEventListener('click', toggleHotelChat);
+            send.addEventListener('click', sendHotelChat);
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    sendHotelChat();
+                }
+            });
+        });
+    </script>
+</body>
 </html>

@@ -3,8 +3,41 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from cloudinary.models import CloudinaryField
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
-# 1. Bảng Loại phòng
+# 1. Bảng Hồ sơ người dùng
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    full_name = models.CharField("Họ và tên", max_length=100, blank=True)
+    age = models.PositiveIntegerField("Tuổi", null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(120)])
+    hometown = models.CharField("Quê quán", max_length=255, blank=True)
+    birth_year = models.PositiveIntegerField("Năm sinh", null=True, blank=True, validators=[MinValueValidator(1900), MaxValueValidator(2026)])
+    phone_number = models.CharField("Số điện thoại", max_length=15, blank=True)
+    email = models.EmailField("Email", blank=True)
+
+    class Meta:
+        verbose_name = "Hồ sơ người dùng"
+        verbose_name_plural = "Hồ sơ người dùng"
+
+    def __str__(self):
+        return f"Hồ sơ của {self.user.username}"
+
+    @property
+    def display_name(self):
+        return self.full_name or self.user.get_full_name() or self.user.username
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.create(user=instance)
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    profile, _ = UserProfile.objects.get_or_create(user=instance)
+    profile.save()
+
+# 2. Bảng Loại phòng
 class RoomType(models.Model):
     name = models.CharField("Tên loại phòng", max_length=100)
     description = models.TextField("Mô tả", blank=True)

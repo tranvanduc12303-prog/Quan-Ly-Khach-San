@@ -11,10 +11,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # --- BẢO MẬT & DEBUG ---
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-full-clean-key-2026')
 
-# Ép buộc DEBUG = False khi lên Production (Render)
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+# DEBUG mặc định True để chạy local dễ dàng; Render/production có thể set env DEBUG=False
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['*'] 
+_allowed_hosts_env = os.environ.get('ALLOWED_HOSTS')
+if _allowed_hosts_env:
+    ALLOWED_HOSTS = _allowed_hosts_env.split(',')
+else:
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
+    if not DEBUG:
+        ALLOWED_HOSTS.append('.onrender.com')
+
+# --- GOOGLE GEMINI API KEY ---
+# Chỉ lấy key từ biến môi trường, không dùng fallback cứng.
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 
 # --- DANH SÁCH ỨNG DỤNG ---
 INSTALLED_APPS = [
@@ -84,11 +94,20 @@ CLOUDINARY_STORAGE = {
     'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', 'HrR9tRA24kdJmI9KaKJ3FA7vsVA')
 }
 
-# Ép buộc Django lưu Media lên Cloudinary thay vì server nội bộ
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+USE_CLOUDINARY = os.environ.get('USE_CLOUDINARY', 'True') == 'True'
+if USE_CLOUDINARY:
+    # Configure cloudinary
+    cloudinary.config(
+        cloud_name=CLOUDINARY_STORAGE['CLOUD_NAME'],
+        api_key=CLOUDINARY_STORAGE['API_KEY'],
+        api_secret=CLOUDINARY_STORAGE['API_SECRET']
+    )
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    MEDIA_URL = os.environ.get('MEDIA_URL', f'https://res.cloudinary.com/{CLOUDINARY_STORAGE["CLOUD_NAME"]}/')
+else:
+    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+    MEDIA_URL = '/media/'
 
-# Trỏ Media URL trực tiếp về Cloudinary
-MEDIA_URL = 'https://res.cloudinary.com/djh1ag2fh/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # --- ĐIỀU HƯỚNG ---

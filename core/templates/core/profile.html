@@ -11,8 +11,31 @@
                         <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=0D6EFD&color=fff&size=128" 
                              class="rounded-circle shadow" alt="Avatar">
                     </div>
-                    <h3 class="fw-bold">{{ user.username }}</h3>
+                    <h3 class="fw-bold">{{ profile.display_name }}</h3>
                     <p class="text-muted">{{ user.email|default:"Chưa cập nhật email" }}</p>
+                    
+                    <!-- Thông tin profile mở rộng -->
+                    {% if profile.full_name or profile.age or profile.hometown %}
+                    <hr>
+                    <div class="text-start">
+                        {% if profile.age %}
+                        <p class="mb-1"><strong>Tuổi:</strong> {{ profile.age }}</p>
+                        {% endif %}
+                        {% if profile.birth_year %}
+                        <p class="mb-1"><strong>Năm sinh:</strong> {{ profile.birth_year }}</p>
+                        {% endif %}
+                        {% if profile.hometown %}
+                        <p class="mb-1"><strong>Quê quán:</strong> {{ profile.hometown }}</p>
+                        {% endif %}
+                        {% if profile.phone_number %}
+                        <p class="mb-1"><strong>SĐT:</strong> {{ profile.phone_number }}</p>
+                        {% endif %}
+                        {% if profile.email %}
+                        <p class="mb-1"><strong>Email cá nhân:</strong> {{ profile.email }}</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
                     <hr>
                     <div class="d-grid gap-2">
                         <a href="{% url 'edit_profile' %}" class="btn btn-primary">
@@ -28,19 +51,19 @@
             <div class="row mb-4">
                 <div class="col-md-4">
                     <div class="card bg-primary text-white text-center p-3 shadow-sm border-0">
-                        <h5>{{ stats.total }}</h5>
+                        <h5>{{ total_bookings }}</h5>
                         <small>Tổng đơn đặt</small>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="card bg-success text-white text-center p-3 shadow-sm border-0">
-                        <h5>{{ stats.approved }}</h5>
+                        <h5>{{ approved_bookings }}</h5>
                         <small>Đã xác nhận</small>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="card bg-warning text-dark text-center p-3 shadow-sm border-0">
-                        <h5>{{ stats.pending }}</h5>
+                        <h5>{{ pending_bookings_count }}</h5>
                         <small>Đang chờ duyệt</small>
                     </div>
                 </div>

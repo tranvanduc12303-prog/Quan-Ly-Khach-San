@@ -54,16 +54,7 @@ urlpatterns = [
     
     # Lệnh khởi tạo Database, tạo Superuser nhanh khi Deploy lên Render
     path('setup-database/', views.setup_database, name='setup_db'),
+    path('webhook/fchat/', views.fchat_webhook, name='fchat_webhook'),
 ]
 
-# --- 6. CẤU HÌNH MEDIA & STATIC (PHỤC VỤ HIỂN THỊ ẢNH) ---
-# Đảm bảo hình ảnh phòng khách sạn hiện lên chính xác trên mọi môi trường
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-else:
-    # Cấu hình dự phòng bắt buộc cho môi trường Production (Render) để không mất ảnh
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-    
-    path('webhook/fchat/', views.fchat_webhook, name='fchat_webhook'),
+# Static và media file được xử lý trong hotel_management/urls.py

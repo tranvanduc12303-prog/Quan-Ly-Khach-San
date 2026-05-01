@@ -13,5 +13,8 @@ urlpatterns = [
 
 # --- CẤU HÌNH HIỂN THỊ HÌNH ẢNH (QUAN TRỌNG) ---
 # Cho phép hiển thị ảnh Media và Static ngay cả khi DEBUG = False trên Render
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+# Chỉ phục vụ Media khi đang dùng Storage nội bộ và DEBUG đang bật
+if settings.DEBUG and settings.MEDIA_URL.startswith('/'):
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -1,8 +1,8 @@
 import os
 import json
 import requests
-import google.generativeai as genai
 from datetime import datetime
+from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
@@ -14,7 +14,7 @@ from django.core.management import call_command
 from django.views.decorators.csrf import csrf_exempt
 
 # Import các Model của dự án MyHotel
-from .models import Room, Booking, Destination, Review, Service
+from .models import Room, Booking, Destination, Review, Service, UserProfile
 
 # =================================================================
 # 1. CẤU HÌNH HỆ THỐNG & TRỢ LÝ AI (GEMINI)
@@ -24,36 +24,100 @@ from .models import Room, Booking, Destination, Review, Service
 FC_TOKEN = "eyJ0eXAiOiJqd3QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOiIyMDI2LTAzLTIzVDA0OjEyOjU1KzA3MDAiLCJzaG9wX2lkIjoiNjljMDViNTY3MmJiMmU2OTRkMDVhZDY2In0.cDEzZornU1JE76dTlBn57WODyz1C90vDvDzNApPznsg"
 FC_SHOP_ID = "69c05b672bb2e694d05ad66"
 
+def get_room_response(user_query):
+    """Trả về câu trả lời cố định cho các câu hỏi liên quan phòng và khách sạn."""
+    q = user_query.lower()
+
+    # Câu hỏi về địa chỉ
+    if any(phrase in q for phrase in ['địa chỉ', 'ở đâu', 'thành phố', 'khu vực', 'tỉnh']):
+        available_rooms = Room.objects.filter(is_available=True)
+        if available_rooms.exists():
+            addresses = set(room.address for room in available_rooms)
+            address_list = ", ".join(addresses)
+            return f"MyHotel hiện có phòng tại {address_list}. Bạn muốn tìm phòng ở khu vực cụ thể nào không?"
+        return "Hiện tại không có phòng trống. Bạn vui lòng liên hệ để được hỗ trợ."
+
+    # Câu hỏi về đặt phòng
+    if any(phrase in q for phrase in ['đặt phòng', 'cách đặt', 'làm sao đặt', 'muốn đặt']):
+        return "Bạn chỉ cần chọn phòng, chọn ngày nhận/trả và nhấn Đặt phòng. Sau đó bạn sẽ nhận được hướng dẫn thanh toán và xác nhận từ MyHotel."
+
+    # Câu hỏi về hủy phòng
+    if any(phrase in q for phrase in ['hủy', 'huỷ', 'bỏ phòng']):
+        return "Bạn có thể vào trang cá nhân và hủy đơn đang chờ duyệt. Nếu đã xác nhận, vui lòng liên hệ lễ tân để được hỗ trợ."
+
+    # Kiểm tra nếu không liên quan đến phòng
+    room_keywords = ['phòng', 'room', 'phong', 'khách sạn', 'hotel', 'myhotel']
+    if not any(word in q for word in room_keywords):
+        return "Xin chào! Tôi là trợ lý ảo của MyHotel. Tôi có thể giúp bạn tư vấn về phòng và dịch vụ. Bạn có câu hỏi gì về phòng không?"
+
+    available_rooms = Room.objects.filter(is_available=True)
+
+    # Câu hỏi về phòng trống
+    if any(phrase in q for phrase in ['còn phòng', 'phòng trống', 'còn trống', 'phòng còn', 'available']):
+        if not available_rooms.exists():
+            return "Hiện tại MyHotel đang tạm hết phòng trống. Bạn vui lòng thử lại sau hoặc liên hệ trực tiếp để được hỗ trợ."
+        rooms = available_rooms[:5]  # Hiển thị tối đa 5 phòng
+        room_list = ", ".join([f"phòng {r.room_number} ({r.room_type.name}) ở {r.address}, giá {int(r.price):,} VNĐ" for r in rooms])
+        return f"Hiện tại còn các phòng trống: {room_list}. Nếu bạn cần, mình sẽ hỗ trợ bạn chọn phòng phù hợp."
+
+    # Câu hỏi về giá
+    if any(phrase in q for phrase in ['giá', 'bao nhiêu', 'chi phí', 'tiền']):
+        if available_rooms.exists():
+            cheapest = available_rooms.order_by('price').first()
+            most_expensive = available_rooms.order_by('-price').first()
+            return f"Phòng trống có giá từ {int(cheapest.price):,} VNĐ đến {int(most_expensive.price):,} VNĐ/đêm. Phòng rẻ nhất là phòng {cheapest.room_number} với giá {int(cheapest.price):,} VNĐ. Bạn muốn mình gửi thêm lựa chọn khác không?"
+        return "Hiện không có phòng trống để báo giá. Bạn thử hỏi lại sau nhé."
+
+    # Câu hỏi về loại phòng
+    if any(phrase in q for phrase in ['loại phòng', 'danh sách', 'có những phòng', 'phòng nào']):
+        room_types = Room.objects.values_list('room_type__name', flat=True).distinct()
+        room_types = [rt for rt in room_types if rt]
+        if room_types:
+            return "MyHotel có các loại phòng như: " + ", ".join(room_types) + ". Bạn muốn tìm phòng loại nào?"
+        return "Hiện tại hệ thống đang cập nhật các loại phòng. Bạn vui lòng hỏi lại sau nhé."
+
+    # Câu hỏi về số lượng phòng
+    if any(phrase in q for phrase in ['bao nhiêu phòng', 'số lượng phòng', 'tổng phòng']):
+        total_rooms = Room.objects.count()
+        available_count = available_rooms.count()
+        return f"MyHotel có tổng cộng {total_rooms} phòng, trong đó {available_count} phòng còn trống."
+
+    # Câu hỏi về dịch vụ
+    if any(phrase in q for phrase in ['dịch vụ', 'service', 'tiện ích']):
+        services = Service.objects.all()
+        if services.exists():
+            service_list = ", ".join([f"{s.name} ({int(s.price):,} VNĐ)" for s in services])
+            return f"MyHotel cung cấp các dịch vụ: {service_list}. Bạn có thể chọn dịch vụ khi đặt phòng."
+        return "MyHotel cung cấp các dịch vụ tiện ích. Bạn vui lòng liên hệ để biết thêm chi tiết."
+
+    # Câu hỏi về đánh giá
+    if any(phrase in q for phrase in ['đánh giá', 'review', 'phản hồi']):
+        rooms_with_reviews = Room.objects.filter(reviews__isnull=False).distinct()
+        if rooms_with_reviews.exists():
+            best_room = max(rooms_with_reviews, key=lambda r: r.average_rating)
+            return f"Phòng {best_room.room_number} có đánh giá cao nhất với {best_room.average_rating}/5 sao. Bạn có thể xem chi tiết đánh giá trên trang phòng."
+        return "Các phòng của MyHotel đều nhận được phản hồi tích cực từ khách hàng. Bạn có thể xem đánh giá chi tiết trên từng phòng."
+
+    # Câu hỏi chung về phòng cụ thể
+    if any(phrase in q for phrase in ['chi tiết', 'thông tin', 'mô tả']):
+        return "Bạn có thể xem chi tiết từng phòng trên trang chủ hoặc trang phòng. Mỗi phòng có ảnh, giá, địa chỉ và đánh giá từ khách hàng."
+
+    # Nếu không khớp với bất kỳ câu hỏi nào
+    return "Xin chào! Tôi có thể giúp bạn tìm phòng trống, báo giá, tư vấn loại phòng hoặc dịch vụ. Bạn có câu hỏi cụ thể nào về phòng không?"
+
+
 def get_ai_response(user_query):
     """
     Hàm xử lý logic AI: Nhận câu hỏi từ khách hàng, 
     truy vấn dữ liệu phòng thực tế và trả về câu trả lời thông minh.
     """
-    api_key = os.environ.get('GEMINI_API_KEY')
-    
-    if not api_key:
-        return "Chào bạn! MyHotel đã nhận được thông tin. Bạn cần tư vấn về phòng hay dịch vụ nào ạ?"
-    
-    try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        
-        # Lấy thông tin một vài phòng đang trống để AI tư vấn khách
-        rooms_available = Room.objects.filter(is_available=True)[:3]
-        room_list_info = ", ".join([f"Phòng {r.room_number} giá {r.price}VNĐ" for r in rooms_available])
-        
-        prompt_template = (
-            f"Bạn là một nhân viên lễ tân chuyên nghiệp tại khách sạn MyHotel. "
-            f"Danh sách phòng hiện đang còn trống: {room_list_info}. "
-            f"Hãy trả lời khách hàng một cách lịch sự, ngắn gọn và hỗ trợ nhất. "
-            f"Câu hỏi của khách hàng là: {user_query}"
-        )
-        
-        response = model.generate_content(prompt_template)
-        return response.text
-    except Exception as e:
-        print(f"Lỗi AI: {e}")
-        return "Xin lỗi bạn, hệ thống tư vấn tự động đang bận. Vui lòng đợi trong giây lát, nhân viên sẽ hỗ trợ bạn ngay!"
+    room_response = get_room_response(user_query)
+    if room_response:
+        return room_response
+
+    # Nếu không khớp với bất kỳ câu hỏi nào, trả lời mặc định
+    return "Chào bạn! MyHotel đã nhận được thông tin. Bạn cần tư vấn về phòng hay dịch vụ nào ạ?"
+
 
 def is_admin(user):
     """Hàm kiểm tra quyền quản trị viên"""
@@ -227,13 +291,15 @@ def profile(request):
     approved_bookings = user_bookings.filter(status__in=['approved', 'completed']).count()
     pending_bookings_count = user_bookings.filter(status='pending').count()
 
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
     context = {
-        'user': request.user, 
-        'bookings': user_bookings, 
-        # TRUYỀN TRỰC TIẾP BIẾN RA NGOÀI ĐỂ KHỚP VỚI HTML
+        'user': request.user,
+        'bookings': user_bookings,
+        # TRUYỀN TRỰC TIẾN BIẾN RA NGOÀI ĐỂ KHỚP VỚI HTML
         'total_bookings': total_bookings,
         'approved_bookings': approved_bookings,
         'pending_bookings_count': pending_bookings_count,
+        'profile': profile,
     }
     
     return render(request, 'core/profile.html', context)
@@ -242,10 +308,22 @@ def profile(request):
 def edit_profile(request):
     """Cập nhật thông tin cá nhân của người dùng"""
     if request.method == 'POST':
+        # Cập nhật thông tin User cơ bản
         request.user.first_name = request.POST.get('first_name', '')
         request.user.last_name = request.POST.get('last_name', '')
         request.user.email = request.POST.get('email', '')
         request.user.save()
+
+        # Cập nhật thông tin Profile mở rộng
+        profile, created = UserProfile.objects.get_or_create(user=request.user)
+        profile.full_name = request.POST.get('full_name', '')
+        profile.age = request.POST.get('age', '') or None
+        profile.hometown = request.POST.get('hometown', '')
+        profile.birth_year = request.POST.get('birth_year', '') or None
+        profile.phone_number = request.POST.get('phone_number', '')
+        profile.email = request.POST.get('profile_email', '')
+        profile.save()
+
         messages.success(request, "Cập nhật thông tin cá nhân thành công!")
         return redirect('profile')
     return render(request, 'core/edit_profile.html')
@@ -364,12 +442,34 @@ def setup_database(request):
     except Exception as error:
         return HttpResponse(f"Lỗi khi thiết lập Database: {str(error)}")
 
+@csrf_exempt
 def ai_assistant(request):
     """View xử lý Chatbox trực tiếp trên giao diện Website"""
-    incoming_query = request.GET.get('message', '').strip()
-    if not incoming_query:
-        return JsonResponse({'reply': "Chào bạn! MyHotel có thể giúp gì cho bạn hôm nay?"})
-    
-    return JsonResponse({'reply': get_ai_response(incoming_query)})
+    try:
+        incoming_query = ''
+
+        if request.method == 'POST':
+            content_type = request.content_type or ''
+            if content_type.startswith('application/json'):
+                try:
+                    payload = json.loads(request.body.decode('utf-8'))
+                    incoming_query = payload.get('message', '')
+                except Exception:
+                    incoming_query = ''
+            else:
+                incoming_query = request.POST.get('message', '')
+        else:
+            incoming_query = request.GET.get('message', '')
+
+        incoming_query = incoming_query.strip()
+        if not incoming_query:
+            return JsonResponse({'reply': "Chào bạn! MyHotel có thể giúp gì cho bạn hôm nay?"})
+
+        return JsonResponse({'reply': get_ai_response(incoming_query)})
+    except Exception as exc:
+        print(f"AI assistant error: {exc}")
+        return JsonResponse({
+            'reply': "Xin lỗi, hiện tại hệ thống chat đang gặp sự cố. Vui lòng thử lại sau." 
+        }, status=500)
 
 # HẾT FILE VIEWS.PY
