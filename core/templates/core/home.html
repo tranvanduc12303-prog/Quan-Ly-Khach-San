@@ -91,6 +91,59 @@
         </div>
         {% endfor %}
     </div>
+
+    <section class="gallery-showcase py-5 mt-5 rounded-5 overflow-hidden" style="background: linear-gradient(145deg, rgba(41,41,41,0.95), rgba(20,20,20,0.95)); border: 1px solid rgba(255,193,7,0.15);">
+        <div class="container">
+            <div class="row align-items-end mb-4">
+                <div class="col-lg-6">
+                    <p class="text-warning fw-semibold mb-2">Hình ảnh minh họa cao cấp</p>
+                    <h2 class="fw-bold display-6 text-white">Không gian nghỉ dưỡng đẳng cấp, thiết kế sang trọng</h2>
+                    <p class="text-muted">Khám phá những không gian khách sạn, lounge, dịch vụ spa và nhà hàng được chọn lọc để truyền cảm hứng cho kỳ nghỉ của bạn.</p>
+                </div>
+                <div class="col-lg-6 text-lg-end">
+                    <a href="#rooms" class="btn btn-yellow btn-lg px-4">Xem phòng ngay</a>
+                </div>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-3">
+                    <div class="showcase-card rounded-4 overflow-hidden shadow-sm">
+                        <img src="https://images.unsplash.com/photo-1501117716987-c8e28d0e29b3?auto=format&fit=crop&w=800&q=80" class="w-100 h-100 object-cover" alt="Phòng nghỉ sang trọng">
+                        <div class="overlay p-3">
+                            <h5 class="mb-1">Phòng Suite VIP</h5>
+                            <p class="mb-0 small">Thiết kế trang nhã với tầm nhìn toàn cảnh.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="showcase-card rounded-4 overflow-hidden shadow-sm">
+                        <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80" class="w-100 h-100 object-cover" alt="Không gian sảnh">
+                        <div class="overlay p-3">
+                            <h5 class="mb-1">Sảnh tiếp khách đẳng cấp</h5>
+                            <p class="mb-0 small">Không gian tiếp đón chuyên nghiệp và ấm cúng.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="showcase-card rounded-4 overflow-hidden shadow-sm">
+                        <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80" class="w-100 h-100 object-cover" alt="Dịch vụ spa">
+                        <div class="overlay p-3">
+                            <h5 class="mb-1">Spa & Wellness</h5>
+                            <p class="mb-0 small">Trải nghiệm thư giãn với dịch vụ chu đáo.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="showcase-card rounded-4 overflow-hidden shadow-sm">
+                        <img src="https://images.unsplash.com/photo-1496417263034-38ec4f0b665a?auto=format&fit=crop&w=800&q=80" class="w-100 h-100 object-cover" alt="Nhà hàng sang trọng">
+                        <div class="overlay p-3">
+                            <h5 class="mb-1">Nhà hàng cao cấp</h5>
+                            <p class="mb-0 small">Ẩm thực tinh tế phục vụ trọn vẹn nhu cầu.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 </div>
 
 <style>
@@ -100,6 +153,54 @@
     .room-card { transition: 0.3s; border: 1px solid #333 !important; background-color: #1a1a1a; overflow: hidden; }
     .room-card:hover { transform: translateY(-5px); border-color: #ffc107 !important; box-shadow: 0 10px 20px rgba(255,193,7,0.2) !important; }
     .dest-card:hover img { transform: scale(1.1); }
+
+    .gallery-showcase {
+        border: 1px solid rgba(255,193,7,0.15);
+        background: linear-gradient(180deg, rgba(18,18,18,0.95), rgba(10,10,10,0.95));
+    }
+    .gallery-showcase h2 {
+        color: #ffffff;
+    }
+    .gallery-showcase p {
+        color: #d1d1d1;
+    }
+    .showcase-card {
+        position: relative;
+        min-height: 280px;
+        overflow: hidden;
+        border: 1px solid rgba(255,193,7,0.08);
+        background: rgba(255,255,255,0.02);
+        transition: transform 0.35s ease, box-shadow 0.35s ease;
+    }
+    .showcase-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.35s ease;
+    }
+    .showcase-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 18px 36px rgba(0,0,0,0.25);
+    }
+    .showcase-card:hover img {
+        transform: scale(1.08);
+    }
+    .showcase-card .overlay {
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        background: linear-gradient(180deg, transparent, rgba(0,0,0,0.85));
+        color: #ffffff;
+        z-index: 2;
+    }
+    .showcase-card h5 {
+        color: #ffc107;
+        font-weight: 700;
+    }
+    .showcase-card p {
+        color: #dcdcdc;
+    }
 </style>
 
 {% endblock %}
