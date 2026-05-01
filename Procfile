@@ -1,1 +1,1 @@
-web: python -m gunicorn hotel_management.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 90
+web: python manage.py migrate --verbosity 2 && gunicorn hotel_management.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 120
