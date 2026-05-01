@@ -6,12 +6,13 @@ class RoomAdmin(admin.ModelAdmin):
     list_display = ('room_number', 'room_type', 'price', 'is_available', 'address')
     list_filter = ('room_type', 'is_available', 'address')
     search_fields = ('room_number', 'address')
-    fields = ('room_number', 'room_type', 'price', 'is_available', 'address', 'description', 'image')
+    exclude = ('image',)
 
-# Admin class for Destination (with image handling)
+# Admin class for Destination (exclude image field to avoid CloudinaryField issues)
 class DestinationAdmin(admin.ModelAdmin):
-    list_display = ('name', 'description')
-    fields = ('name', 'description', 'image')
+    list_display = ('name',)
+    fields = ('name', 'description')
+    exclude = ('image',)
 
 # Đăng ký các model để chúng hiện ra trong trang quản trị
 admin.site.register(RoomType)
