@@ -93,15 +93,16 @@ CLOUDINARY_STORAGE = {
 }
 
 USE_CLOUDINARY = os.environ.get('USE_CLOUDINARY', 'True') == 'True'
+
 if USE_CLOUDINARY:
-    # Configure cloudinary
     cloudinary.config(
         cloud_name=CLOUDINARY_STORAGE['CLOUD_NAME'],
         api_key=CLOUDINARY_STORAGE['API_KEY'],
         api_secret=CLOUDINARY_STORAGE['API_SECRET']
     )
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-    MEDIA_URL = os.environ.get('MEDIA_URL', f'https://res.cloudinary.com/{CLOUDINARY_STORAGE["CLOUD_NAME"]}/')
+    # MEDIA_URL nên để Django tự xử lý từ Cloudinary hoặc dùng cấu hình chuẩn
+    MEDIA_URL = '/media/' 
 else:
     DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
     MEDIA_URL = '/media/'
