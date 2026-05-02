@@ -87,9 +87,9 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # --- CẤU HÌNH CLOUDINARY (MEDIA FILES) ---
 CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', 'djh1ag2fh'), 
-    'API_KEY': os.environ.get('CLOUDINARY_API_KEY', '315465561373434'),
-    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', 'HrR9tRA24kdJmI9KaKJ3FA7vsVA')
+    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME'), 
+    'API_KEY': os.environ.get('CLOUDINARY_API_KEY'),
+    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET')
 }
 
 USE_CLOUDINARY = os.environ.get('USE_CLOUDINARY', 'True') == 'True'
