@@ -52,7 +52,7 @@ class RoomType(models.Model):
 class Room(models.Model):
     room_number = models.CharField("Số phòng", max_length=10, unique=True)
     room_type = models.ForeignKey(RoomType, on_delete=models.CASCADE, verbose_name="Loại phòng")
-    image = CloudinaryField('Ảnh đại diện', folder='rooms/', null=True, blank=True)
+    image = models.ImageField('Ảnh đại diện', upload_to='rooms/', null=True, blank=True)
     price = models.DecimalField("Giá mỗi đêm", max_digits=12, decimal_places=0)
     is_available = models.BooleanField("Còn trống", default=True)
     address = models.CharField("Địa chỉ/Thành phố", max_length=255, default="Hà Nội") 
