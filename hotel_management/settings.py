@@ -86,29 +86,25 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # --- CẤU HÌNH CLOUDINARY (MEDIA FILES) ---
+# --- CẤU HÌNH CLOUDINARY (MEDIA FILES) ---
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME'), 
     'API_KEY': os.environ.get('CLOUDINARY_API_KEY'),
     'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET')
 }
 
-USE_CLOUDINARY = os.environ.get('USE_CLOUDINARY', 'True') == 'True'
+# Cấu hình trực tiếp cho thư viện Cloudinary SDK để tránh lỗi Signature
+cloudinary.config(
+    cloud_name=CLOUDINARY_STORAGE['CLOUD_NAME'],
+    api_key=CLOUDINARY_STORAGE['API_KEY'],
+    api_secret=CLOUDINARY_STORAGE['API_SECRET'],
+    secure=True
+)
 
-if USE_CLOUDINARY:
-    cloudinary.config(
-        cloud_name=CLOUDINARY_STORAGE['CLOUD_NAME'],
-        api_key=CLOUDINARY_STORAGE['API_KEY'],
-        api_secret=CLOUDINARY_STORAGE['API_SECRET']
-    )
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-    # MEDIA_URL nên để Django tự xử lý từ Cloudinary hoặc dùng cấu hình chuẩn
-    MEDIA_URL = '/media/' 
-else:
-    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
-    MEDIA_URL = '/media/'
-
+# Chỉ định nơi lưu trữ file media
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
-
 # --- ĐIỀU HƯỚNG ---
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
