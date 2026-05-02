@@ -151,7 +151,7 @@ class Review(models.Model):
 # 6. Bảng Địa điểm (Bổ sung nếu dự án của bạn có dùng)
 class Destination(models.Model):
     name = models.CharField("Tên địa điểm", max_length=200)
-    image = CloudinaryField('Ảnh địa điểm', folder='destinations/', null=True, blank=True)
+    image = models.ImageField('Ảnh địa điểm', upload_to='destinations/', null=True, blank=True)
     description = models.TextField("Mô tả", blank=True)
 
     class Meta:
