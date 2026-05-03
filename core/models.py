@@ -52,7 +52,7 @@ class RoomType(models.Model):
 class Room(models.Model):
     room_number = models.CharField("Số phòng", max_length=10, unique=True)
     room_type = models.ForeignKey(RoomType, on_delete=models.CASCADE, verbose_name="Loại phòng")
-    image = models.ImageField('Ảnh đại diện', upload_to='rooms/', null=True, blank=True)
+    image = CloudinaryField('Ảnh đại diện', blank=True, null=True)
     price = models.DecimalField("Giá mỗi đêm", max_digits=12, decimal_places=0)
     is_available = models.BooleanField("Còn trống", default=True)
     address = models.CharField("Địa chỉ/Thành phố", max_length=255, default="Hà Nội") 
@@ -151,7 +151,7 @@ class Review(models.Model):
 # 6. Bảng Địa điểm (Bổ sung nếu dự án của bạn có dùng)
 class Destination(models.Model):
     name = models.CharField("Tên địa điểm", max_length=200)
-    image = models.ImageField('Ảnh địa điểm', upload_to='destinations/', null=True, blank=True)
+    image = CloudinaryField('Ảnh địa điểm', blank=True, null=True)
     description = models.TextField("Mô tả", blank=True)
 
     class Meta:
