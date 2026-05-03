@@ -33,7 +33,7 @@
                     <div class="card bg-transparent border-0 dest-card">
                         <div class="overflow-hidden rounded-4 position-relative" style="height: 250px;">
                             {% if dest.image %}
-                                <img src="{{ dest.image.url }}" class="w-100 h-100" style="object-fit: cover; transition: 0.5s;">
+                                <img src="{{ dest.image.url }}" alt="{{ dest.name }}" loading="lazy" class="w-100 h-100" style="object-fit: cover; transition: 0.5s;" onerror="this.onerror=null;this.src='https://via.placeholder.com/220x250/111111/ffc107?text=No+Image';">
                             {% else %}
                                 <div class="w-100 h-100 bg-secondary d-flex align-items-center justify-content-center text-white">No Image</div>
                             {% endif %}
