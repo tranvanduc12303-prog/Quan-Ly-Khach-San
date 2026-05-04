@@ -6,4 +6,4 @@ services:
     region: oregon
     branch: main
     buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --verbosity 2
-    startCommand: gunicorn hotel_management.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 120
+    startCommand: bash -lc "gunicorn hotel_management.wsgi:application --bind 0.0.0.0:${PORT:-10000} --workers 1 --timeout 120"
