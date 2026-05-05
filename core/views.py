@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
-from django.db.models import Q, Count, Sum
+from django.db.models import Q, Count, Sum, Avg
 from django.http import JsonResponse, HttpResponse
 from django.core.management import call_command
 from django.views.decorators.csrf import csrf_exempt
@@ -29,82 +29,116 @@ def get_room_response(user_query):
     """Trả về câu trả lời cố định cho các câu hỏi liên quan phòng và khách sạn."""
     q = user_query.lower()
 
-    # Câu hỏi về địa chỉ
-    if any(phrase in q for phrase in ['địa chỉ', 'ở đâu', 'thành phố', 'khu vực', 'tỉnh']):
+    # Câu hỏi về địa chỉ/vị trí
+    if any(phrase in q for phrase in ['địa chỉ', 'ở đâu', 'thành phố', 'khu vực', 'tỉnh', 'vị trí', 'nơi ở', 'tọa lạc', 'khu đất', 'miền', 'quận', 'huyện']):
         available_rooms = Room.objects.filter(is_available=True)
         if available_rooms.exists():
             addresses = set(room.address for room in available_rooms)
             address_list = ", ".join(addresses)
-            return f"MyHotel hiện có phòng tại {address_list}. Bạn muốn tìm phòng ở khu vực cụ thể nào không?"
+            return f"✨ MyHotel hiện có phòng tại: {address_list}. Bạn muốn tìm phòng ở khu vực cụ thể nào không?"
         return "Hiện tại không có phòng trống. Bạn vui lòng liên hệ để được hỗ trợ."
 
     # Câu hỏi về đặt phòng
-    if any(phrase in q for phrase in ['đặt phòng', 'cách đặt', 'làm sao đặt', 'muốn đặt']):
-        return "Bạn chỉ cần chọn phòng, chọn ngày nhận/trả và nhấn Đặt phòng. Sau đó bạn sẽ nhận được hướng dẫn thanh toán và xác nhận từ MyHotel."
+    if any(phrase in q for phrase in ['đặt phòng', 'cách đặt', 'làm sao đặt', 'muốn đặt', 'đặt phòng như thế nào', 'quy trình đặt', 'cách để đặt phòng']):
+        return "📋 Quy trình đặt phòng:\n1. Chọn phòng bạn yêu thích\n2. Chọn ngày nhận/trả phòng\n3. Chọn dịch vụ (nếu cần)\n4. Nhấn 'Đặt phòng'\n5. Tiến hành thanh toán\n6. Nhận xác nhận từ MyHotel. Bạn cần tư vấn thêm không?"
 
     # Câu hỏi về hủy phòng
-    if any(phrase in q for phrase in ['hủy', 'huỷ', 'bỏ phòng']):
-        return "Bạn có thể vào trang cá nhân và hủy đơn đang chờ duyệt. Nếu đã xác nhận, vui lòng liên hệ lễ tân để được hỗ trợ."
+    if any(phrase in q for phrase in ['hủy', 'huỷ', 'bỏ phòng', 'hủy đặt', 'hủy phòng', 'không muốn đặt nữa', 'huỷ bỏ đặt phòng']):
+        return "🔄 Hủy phòng:\n- Nếu chưa duyệt: Vào trang cá nhân > Đơn đặt phòng > Hủy\n- Nếu đã duyệt: Liên hệ lễ tân để được xử lý\n- Hoàn tiền sẽ được gửi trong 3-5 ngày làm việc."
+
+    # Câu hỏi về liên hệ/hỗ trợ
+    if any(phrase in q for phrase in ['liên hệ', 'hỗ trợ', 'hotline', 'số điện thoại', 'email', 'facebook', 'hỏi gì', 'cần giúp', '24/7', 'hỗ trợ khách hàng']):
+        return "📞 Liên hệ MyHotel:\n• Hotline: 1900 XXXX (24/7)\n• Email: support@myhotel.vn\n• Facebook: MyHotel Official\n• Website: www.myhotel.vn\n\nChúng tôi luôn sẵn sàng hỗ trợ bạn!"
+
+    # Câu hỏi về thanh toán
+    if any(phrase in q for phrase in ['thanh toán', 'payment', 'cách thanh toán', 'trả tiền', 'được thanh toán', 'hình thức thanh', 'thẻ', 'ngân hàng', 'tiền mặt', 'chấp nhận']):
+        return "💳 Phương thức thanh toán:\nMyHotel chấp nhận:\n• Thẻ tín dụng (Visa, Mastercard)\n• Chuyển khoản ngân hàng\n• Ví điện tử (ZaloPay, Momo)\n• Tiền mặt tại quầy\n\nLựa chọn nào phù hợp với bạn?"
+
+    # Câu hỏi về giảm giá/khuyến mãi
+    if any(phrase in q for phrase in ['giảm giá', 'khuyến mãi', 'discount', 'sale', 'giá rẻ', 'ưu đãi', 'mã giảm', 'promo', 'deal']):
+        return "🎉 Ưu đãi & khuyến mãi:\nMyHotel thường xuyên có:\n• Giảm giá cho đặt trước\n• Combo package tiết kiệm\n• Ưu đãi khách hàng thân thiết\n• Mã khuyến mãi mùa lễ\n\nBạn hãy liên hệ để nhận ưu đãi tốt nhất!"
+
+    # Câu hỏi về khoảng cách/vận chuyển
+    if any(phrase in q for phrase in ['cách bao xa', 'khoảng cách', 'gần', 'xa', 'sân bay', 'ga tàu', 'giao thông', 'đi lại', 'transport']):
+        return "🚗 Vị trí & giao thông:\nMyHotel có vị trí thuận lợi:\n• Gần sân bay/ga tàu\n• Dễ dàng di chuyển\n• Gần các điểm du lịch\n• Dịch vụ xe đưa đón có sẵn\n\nBạn cần chi tiết vị trí cụ thể nào?"
 
     # Kiểm tra nếu không liên quan đến phòng
     room_keywords = ['phòng', 'room', 'phong', 'khách sạn', 'hotel', 'myhotel']
     if not any(word in q for word in room_keywords):
-        return "Xin chào! Tôi là trợ lý ảo của MyHotel. Tôi có thể giúp bạn tư vấn về phòng và dịch vụ. Bạn có câu hỏi gì về phòng không?"
+        return "Xin chào! 👋 Tôi là trợ lý ảo của MyHotel. Tôi có thể giúp bạn tư vấn về phòng, giá cả, dịch vụ và tiện ích. Bạn có câu hỏi gì không?"
 
     available_rooms = Room.objects.filter(is_available=True)
 
     # Câu hỏi về phòng trống
-    if any(phrase in q for phrase in ['còn phòng', 'phòng trống', 'còn trống', 'phòng còn', 'available']):
+    if any(phrase in q for phrase in ['còn phòng', 'phòng trống', 'còn trống', 'phòng còn', 'available', 'phòng nào còn', 'phòng nào trống', 'có phòng không', 'phòng còn khả dụng']):
         if not available_rooms.exists():
-            return "Hiện tại MyHotel đang tạm hết phòng trống. Bạn vui lòng thử lại sau hoặc liên hệ trực tiếp để được hỗ trợ."
+            return "😔 Hiện tại MyHotel đang tạm hết phòng trống. Bạn vui lòng thử lại sau hoặc liên hệ trực tiếp để được hỗ trợ."
         rooms = available_rooms[:5]  # Hiển thị tối đa 5 phòng
-        room_list = ", ".join([f"phòng {r.room_number} ({r.room_type.name}) ở {r.address}, giá {int(r.price):,} VNĐ" for r in rooms])
-        return f"Hiện tại còn các phòng trống: {room_list}. Nếu bạn cần, mình sẽ hỗ trợ bạn chọn phòng phù hợp."
+        room_list = "\n".join([f"  • Phòng {r.room_number} ({r.room_type.name}) - {r.address} - {int(r.price):,} VNĐ/đêm" for r in rooms])
+        return f"✅ Phòng trống hiện có:\n{room_list}\n\nBạn muốn chọn phòng nào?"
 
-    # Câu hỏi về giá
-    if any(phrase in q for phrase in ['giá', 'bao nhiêu', 'chi phí', 'tiền']):
+    # Câu hỏi về giá phòng
+    if any(phrase in q for phrase in ['giá', 'bao nhiêu', 'chi phí', 'tiền', 'giá tiền', 'giá cả', 'mức giá', 'chi phí phòng', 'giá phòng bao nhiêu', 'phòng bao nhiêu tiền', 'rẻ nhất', 'đắt nhất']):
         if available_rooms.exists():
             cheapest = available_rooms.order_by('price').first()
             most_expensive = available_rooms.order_by('-price').first()
-            return f"Phòng trống có giá từ {int(cheapest.price):,} VNĐ đến {int(most_expensive.price):,} VNĐ/đêm. Phòng rẻ nhất là phòng {cheapest.room_number} với giá {int(cheapest.price):,} VNĐ. Bạn muốn mình gửi thêm lựa chọn khác không?"
+            avg_price = int(available_rooms.aggregate(avg=Avg('price'))['avg'] or 0)
+            return f"💰 Giá phòng tại MyHotel:\n• Giá thấp nhất: {int(cheapest.price):,} VNĐ/đêm (Phòng {cheapest.room_number})\n• Giá cao nhất: {int(most_expensive.price):,} VNĐ/đêm\n• Giá trung bình: {avg_price:,} VNĐ/đêm\n\nBạn có muốn tìm phòng theo tầm giá cụ thể không?"
         return "Hiện không có phòng trống để báo giá. Bạn thử hỏi lại sau nhé."
 
     # Câu hỏi về loại phòng
-    if any(phrase in q for phrase in ['loại phòng', 'danh sách', 'có những phòng', 'phòng nào']):
+    if any(phrase in q for phrase in ['loại phòng', 'danh sách', 'có những phòng', 'phòng nào', 'phòng loại', 'phòng gì', 'các loại phòng', 'phòng khác nhau', 'có những loại']):
         room_types = Room.objects.values_list('room_type__name', flat=True).distinct()
         room_types = [rt for rt in room_types if rt]
         if room_types:
-            return "MyHotel có các loại phòng như: " + ", ".join(room_types) + ". Bạn muốn tìm phòng loại nào?"
+            type_list = ", ".join(room_types)
+            return f"🛏️ MyHotel cung cấp các loại phòng: {type_list}. Bạn muốn tìm phòng loại nào?"
         return "Hiện tại hệ thống đang cập nhật các loại phòng. Bạn vui lòng hỏi lại sau nhé."
 
     # Câu hỏi về số lượng phòng
-    if any(phrase in q for phrase in ['bao nhiêu phòng', 'số lượng phòng', 'tổng phòng']):
+    if any(phrase in q for phrase in ['bao nhiêu phòng', 'số lượng phòng', 'tổng phòng', 'tổng cộng', 'có bao nhiêu phòng', 'phòng bao nhiêu cái']):
         total_rooms = Room.objects.count()
         available_count = available_rooms.count()
-        return f"MyHotel có tổng cộng {total_rooms} phòng, trong đó {available_count} phòng còn trống."
+        return f"📊 Thông tin phòng tại MyHotel:\n• Tổng số phòng: {total_rooms} phòng\n• Phòng còn trống: {available_count} phòng\n• Phòng đã đặt: {total_rooms - available_count} phòng"
 
-    # Câu hỏi về dịch vụ
-    if any(phrase in q for phrase in ['dịch vụ', 'service', 'tiện ích']):
+    # Câu hỏi về tiện ích/dịch vụ
+    if any(phrase in q for phrase in ['dịch vụ', 'service', 'tiện ích', 'có gì', 'phòng có', 'được cung cấp', 'bao gồm', 'gồm có', 'đi kèm', 'trang bị', 'thiết bị', 'wifi', 'điều hòa', 'tivi', 'phòng tắm', 'bếp']):
         services = Service.objects.all()
         if services.exists():
-            service_list = ", ".join([f"{s.name} ({int(s.price):,} VNĐ)" for s in services])
-            return f"MyHotel cung cấp các dịch vụ: {service_list}. Bạn có thể chọn dịch vụ khi đặt phòng."
-        return "MyHotel cung cấp các dịch vụ tiện ích. Bạn vui lòng liên hệ để biết thêm chi tiết."
+            service_list = "\n".join([f"  • {s.name}: {int(s.price):,} VNĐ" for s in services])
+            return f"🎁 Dịch vụ & tiện ích tại MyHotel:\n{service_list}\n\nBạn có thể chọn dịch vụ khi đặt phòng."
+        return "✨ MyHotel cung cấp nhiều dịch vụ tiện ích như: WiFi miễn phí, điều hòa, tivi, phòng tắm hiện đại, v.v. Bạn muốn tìm hiểu chi tiết không?"
 
-    # Câu hỏi về đánh giá
-    if any(phrase in q for phrase in ['đánh giá', 'review', 'phản hồi']):
+    # Câu hỏi về đánh giá/review
+    if any(phrase in q for phrase in ['đánh giá', 'review', 'phản hồi', 'sao', 'rating', 'nhận xét', 'comment', 'ý kiến', 'phòng tốt', 'phòng xấu']):
         rooms_with_reviews = Room.objects.filter(reviews__isnull=False).distinct()
         if rooms_with_reviews.exists():
-            best_room = max(rooms_with_reviews, key=lambda r: r.average_rating)
-            return f"Phòng {best_room.room_number} có đánh giá cao nhất với {best_room.average_rating}/5 sao. Bạn có thể xem chi tiết đánh giá trên trang phòng."
-        return "Các phòng của MyHotel đều nhận được phản hồi tích cực từ khách hàng. Bạn có thể xem đánh giá chi tiết trên từng phòng."
+            best_room = max(rooms_with_reviews, key=lambda r: r.average_rating if r.average_rating else 0)
+            return f"⭐ Đánh giá từ khách hàng:\n• Phòng được yêu thích nhất: Phòng {best_room.room_number} - {best_room.average_rating}/5 sao\n\nBạn có thể xem đánh giá chi tiết của từng phòng trên trang web."
+        return "⭐ Các phòng của MyHotel đều nhận được phản hồi tích cực từ khách hàng. Bạn có thể xem đánh giá chi tiết trên trang của từng phòng."
 
-    # Câu hỏi chung về phòng cụ thể
-    if any(phrase in q for phrase in ['chi tiết', 'thông tin', 'mô tả']):
-        return "Bạn có thể xem chi tiết từng phòng trên trang chủ hoặc trang phòng. Mỗi phòng có ảnh, giá, địa chỉ và đánh giá từ khách hàng."
+    # Câu hỏi về chi tiết phòng
+    if any(phrase in q for phrase in ['chi tiết', 'thông tin', 'mô tả', 'như thế nào', 'ra sao', 'tìm hiểu', 'biết thêm', 'hình ảnh', 'ảnh']):
+        return "📸 Thông tin chi tiết phòng:\nBạn có thể xem chi tiết từng phòng trên trang chủ hoặc trang phòng cụ thể:\n• Ảnh phòng chất lượng cao\n• Giá tiền chi tiết\n• Địa chỉ & vị trí\n• Đánh giá & nhận xét từ khách hàng\n• Danh sách dịch vụ kèm theo"
+
+    # Câu hỏi về phòng đôi/cặp
+    if any(phrase in q for phrase in ['phòng đôi', 'phòng cặp', 'phòng 2 người', 'phòng vợ chồng', 'phòng tình nhân', 'phòng honeymoon']):
+        return "💑 Phòng cho cặp đôi:\nMyHotel có nhiều phòng đôi với các trang thiết bị hiện đại, thoải mái và lãng mạn. Giá từ [giá thấp] đến [giá cao] VNĐ/đêm.\n\nBạn muốn xem các phòng đôi nào?"
+
+    # Câu hỏi về phòng gia đình/nhóm
+    if any(phrase in q for phrase in ['phòng gia đình', 'phòng nhóm', 'phòng 4 người', 'phòng 3 người', 'phòng tập thể', 'phòng đoàn']):
+        return "👨‍👩‍👧‍👦 Phòng gia đình/nhóm:\nMyHotel cung cấp phòng rộng rãi cho gia đình hoặc nhóm bạn:\n• Phòng 3 người: Phù hợp cho gia đình nhỏ\n• Phòng 4+ người: Ideal cho nhóm bạn\n\nĐặc biệt tiết kiệm khi đặt từ 3 đêm trở lên!"
+
+    # Câu hỏi về phòng một người
+    if any(phrase in q for phrase in ['phòng một', 'phòng đơn', 'phòng 1 người', 'phòng solo', 'phòng riêng']):
+        return "🚶 Phòng một người:\nMyHotel có nhiều phòng đơn gọn gàng, tiện lợi cho du khách độc hành:\n• Giường đơn hoặc giường đôi\n• Hệ thống WiFi mạnh mẽ\n• Giá cạnh tranh từ [giá] VNĐ/đêm\n\nPerfect cho những ai thích độc lập!"
+
+    # Câu hỏi về nhân viên/lễ tân
+    if any(phrase in q for phrase in ['nhân viên', 'lễ tân', 'staff', 'quản lý', 'hỏi người', 'nói chuyện với']):
+        return "👥 Đội ngũ nhân viên MyHotel:\nChúng tôi có đội ngũ nhân viên thân thiện, chuyên nghiệp sẵn sàng:\n• Hỗ trợ 24/7\n• Tư vấn chi tiết\n• Xử lý các yêu cầu đặc biệt\n\nHãy gọi hotline để nói chuyện trực tiếp với lễ tân!"
 
     # Nếu không khớp với bất kỳ câu hỏi nào
-    return "Xin chào! Tôi có thể giúp bạn tìm phòng trống, báo giá, tư vấn loại phòng hoặc dịch vụ. Bạn có câu hỏi cụ thể nào về phòng không?"
+    return "👋 Chào bạn! Tôi có thể giúp bạn:\n• Tìm phòng trống phù hợp\n• Báo giá chi tiết\n• Tư vấn loại phòng\n• Hỏi về dịch vụ & tiện ích\n• Hướng dẫn đặt phòng\n\nBạn có câu hỏi cụ thể nào không? 😊"
 
 
 def get_ai_response(user_query):
