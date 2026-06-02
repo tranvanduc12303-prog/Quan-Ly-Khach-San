@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 import dj_database_url
-from urllib.parse import quote_plus
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
@@ -73,41 +72,24 @@ TEMPLATES = [
 WSGI_APPLICATION = 'hotel_management.wsgi.application'
 
 # --- CƠ SỞ DỮ LIỆU ---
-_env_database_url = os.environ.get('DATABASE_URL')
+_env_database_url = os.environ.get('DATABASE_URL', '').strip()
 
-def _build_db_url_from_parts():
-    db_user = os.environ.get('DATABASE_USER', 'db_khach_san_ypmi_user')
-    db_name = os.environ.get('DATABASE_NAME', 'db_khach_san_ypmi')
-    db_host = os.environ.get('DATABASE_HOST', 'dpg-d8f48oreo5us73bf0dcg-a')
-    db_port = os.environ.get('DATABASE_PORT', '5432')
-    db_pass = os.environ.get('DATABASE_PASS', '')
-    if db_pass:
-        db_pass = quote_plus(db_pass)
-    return f'postgresql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}'
+# Kiểm tra xem DATABASE_URL có hợp lệ không (phải có '@' và '://')
+_is_valid_db_url = _env_database_url and '@' in _env_database_url and '://' in _env_database_url
 
-if _env_database_url:
-    if '@' in _env_database_url and '://' in _env_database_url:
-        DATABASES = {
-            'default': dj_database_url.config(default=_env_database_url, conn_max_age=600)
-        }
-    else:
-        built = _build_db_url_from_parts()
-        DATABASES = {
-            'default': dj_database_url.config(default=built, conn_max_age=600)
-        }
+if _is_valid_db_url:
+    # Dùng DATABASE_URL từ biến môi trường
+    DATABASES = {
+        'default': dj_database_url.config(default=_env_database_url, conn_max_age=600)
+    }
 else:
-    if os.environ.get('DATABASE_PASS') or os.environ.get('DATABASE_USER'):
-        built = _build_db_url_from_parts()
-        DATABASES = {
-            'default': dj_database_url.config(default=built, conn_max_age=600)
+    # Fallback to SQLite (vì trên Render cần set DATABASE_URL mới được)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
         }
-    else:
-        DATABASES = {
-            'default': dj_database_url.config(
-                default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
-                conn_max_age=600
-            )
-        }
+    }
 
 # --- TẬP TIN TĨNH (STATIC FILES) ---
 STATIC_URL = '/static/'
