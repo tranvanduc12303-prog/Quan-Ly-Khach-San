@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
@@ -52,7 +53,10 @@ class RoomType(models.Model):
 class Room(models.Model):
     room_number = models.CharField("Số phòng", max_length=10, unique=True)
     room_type = models.ForeignKey(RoomType, on_delete=models.CASCADE, verbose_name="Loại phòng")
-    image = CloudinaryField('Ảnh đại diện', folder='rooms', resource_type='image', blank=True, null=True)
+    if settings.DEFAULT_FILE_STORAGE == 'cloudinary_storage.storage.MediaCloudinaryStorage':
+        image = CloudinaryField('Ảnh đại diện', folder='rooms', resource_type='image', blank=True, null=True)
+    else:
+        image = models.ImageField('Ảnh đại diện', upload_to='rooms/', blank=True, null=True)
     price = models.DecimalField("Giá mỗi đêm", max_digits=12, decimal_places=0)
     is_available = models.BooleanField("Còn trống", default=True)
     address = models.CharField("Địa chỉ/Thành phố", max_length=255, default="Hà Nội") 
@@ -70,6 +74,15 @@ class Room(models.Model):
         if reviews.exists():
             return round(sum(r.rating for r in reviews) / reviews.count(), 1)
         return 0
+
+    @property
+    def image_url(self):
+        try:
+            if self.image:
+                return self.image.url
+        except Exception:
+            return ''
+        return ''
 
 # 3. Bảng Dịch vụ
 class Service(models.Model):
