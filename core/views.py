@@ -501,10 +501,30 @@ def setup_database(request):
     """Lệnh khẩn cấp để khởi tạo Database trên Render (Migration + Superuser)"""
     try:
         call_command('migrate')
-        if not User.objects.filter(username='admin_moi').exists():
-            User.objects.create_superuser('admin_moi', 'admin@hotel.com', 'admin12345')
-            return HttpResponse("Khởi tạo Database và Admin thành công!")
-        return HttpResponse("Hệ thống Database đã hoạt động bình thường.")
+        admin_username = 'admin_moi'
+        admin_password = 'admin12345'
+        admin_email = 'admin@hotel.com'
+
+        user, created = User.objects.get_or_create(
+            username=admin_username,
+            defaults={
+                'email': admin_email,
+                'is_staff': True,
+                'is_superuser': True,
+                'is_active': True,
+            }
+        )
+
+        user.email = admin_email
+        user.is_staff = True
+        user.is_superuser = True
+        user.is_active = True
+        user.set_password(admin_password)
+        user.save()
+
+        if created:
+            return HttpResponse("Khởi tạo Database và Admin thành công! Username: admin_moi, Password: admin12345")
+        return HttpResponse("Admin admin_moi đã tồn tại; mật khẩu đã reset về admin12345.")
     except Exception as error:
         return HttpResponse(f"Lỗi khi thiết lập Database: {str(error)}")
 
