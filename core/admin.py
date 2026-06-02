@@ -21,8 +21,10 @@ class RoomAdmin(admin.ModelAdmin):
 # Admin class for Destination (with image handling)
 class DestinationAdmin(admin.ModelAdmin):
     form = DestinationAdminForm
-    list_display = ('name',)
-    fields = ('name', 'description', 'image', 'image_preview')
+    list_display = ('name', 'is_featured')
+    list_filter = ('is_featured',)
+    search_fields = ('name',)
+    fields = ('name', 'description', 'image', 'is_featured', 'image_preview')
     readonly_fields = ('image_preview',)
 
     def image_preview(self, obj):

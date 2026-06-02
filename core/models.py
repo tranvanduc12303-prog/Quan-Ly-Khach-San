@@ -153,6 +153,8 @@ class Destination(models.Model):
     name = models.CharField("Tên địa điểm", max_length=200)
     image = models.ImageField("Ảnh địa điểm", upload_to='destinations/', blank=True, null=True)
     description = models.TextField("Mô tả", blank=True)
+    is_featured = models.BooleanField("Nổi bật", default=True,
+                                      help_text="Đánh dấu để hiển thị địa điểm này ở phần địa điểm nổi bật.")
 
     class Meta:
         verbose_name_plural = "Địa điểm nổi bật"

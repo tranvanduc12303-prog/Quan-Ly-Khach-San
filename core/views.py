@@ -201,7 +201,7 @@ def fchat_webhook(request):
 def home(request):
     """Hiển thị danh sách phòng và tìm kiếm phòng khách sạn"""
     search_query = request.GET.get('q', '').strip()
-    all_destinations = Destination.objects.all()
+    all_destinations = Destination.objects.filter(is_featured=True)
     
     # Sắp xếp phòng trống lên đầu tiên
     all_rooms = Room.objects.all().order_by('-is_available', 'price')
