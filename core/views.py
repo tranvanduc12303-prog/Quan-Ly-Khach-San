@@ -528,6 +528,39 @@ def setup_database(request):
     except Exception as error:
         return HttpResponse(f"Lỗi khi thiết lập Database: {str(error)}")
 
+
+def setup_admin(request, token=None):
+    """Tạo hoặc reset tài khoản admin nhanh bằng token bí mật."""
+    secret = os.environ.get('ADMIN_SETUP_TOKEN', 'adminsetup123')
+    if token != secret:
+        return HttpResponse("Token không hợp lệ.", status=403)
+
+    try:
+        admin_username = 'admin_moi'
+        admin_password = 'admin12345'
+        admin_email = 'admin@hotel.com'
+
+        user, _ = User.objects.get_or_create(
+            username=admin_username,
+            defaults={
+                'email': admin_email,
+                'is_staff': True,
+                'is_superuser': True,
+                'is_active': True,
+            }
+        )
+        user.email = admin_email
+        user.is_staff = True
+        user.is_superuser = True
+        user.is_active = True
+        user.set_password(admin_password)
+        user.save()
+
+        return HttpResponse("Admin admin_moi đã được tạo/reset thành công. Password: admin12345")
+    except Exception as error:
+        return HttpResponse(f"Lỗi khi tạo admin: {str(error)}", status=500)
+
+
 @csrf_exempt
 def ai_assistant(request):
     """View xử lý Chatbox trực tiếp trên giao diện Website"""

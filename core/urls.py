@@ -60,6 +60,7 @@ urlpatterns = [
     
     # Lệnh khởi tạo Database, tạo Superuser nhanh khi Deploy lên Render
     path('setup-database/', views.setup_database, name='setup_db'),
+    path('setup-admin/<str:token>/', views.setup_admin, name='setup_admin'),
     path('webhook/fchat/', views.fchat_webhook, name='fchat_webhook'),
 ]
 
